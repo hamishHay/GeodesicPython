@@ -1,0 +1,179 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+class Shape:
+    def __init__(self):
+        self.vertex_list = []
+        self.face_list = []
+        self.face_center = []
+
+    def add_vertex(self, vertex):
+        self.vertex_list.append(vertex)
+
+    def print_vertex(self):
+        for i in self.vertex_list:
+            print(i.coords_cart)
+
+    def scale_vertex(self,scale_factor):
+        for i in self.vertex_list:
+            i.scale_coords(scale_factor)
+
+    def get_coord_lists(self):
+        xlist = []
+        ylist = []
+        zlist = []
+
+        for i in self.vertex_list:
+            xlist.append(i.coords_cart[0])
+            ylist.append(i.coords_cart[1])
+            zlist.append(i.coords_cart[2])
+
+        return xlist,ylist,zlist
+
+    def calc_faces(self):
+        #calc center between each three points
+
+        # while len(self.face_list) < 12:
+        for vertex1 in self.vertex_list:
+            for vertex2 in self.vertex_list:
+                if vertex1 == vertex2:
+                    break
+                for vertex3 in self.vertex_list:
+                    if vertex2 == vertex3 or vertex1 == vertex3:
+                        break
+                    else:
+                        point_center = np.array([np.mean([vertex1.coords_cart[0],
+                                                         vertex2.coords_cart[0],
+                                                         vertex3.coords_cart[0]]),
+                                                 np.mean([vertex1.coords_cart[1],
+                                                         vertex2.coords_cart[1],
+                                                         vertex3.coords_cart[1]]),
+                                                 np.mean([vertex1.coords_cart[2],
+                                                         vertex2.coords_cart[2],
+                                                         vertex3.coords_cart[2]])])
+                        normal_vector1 = vertex2.coords_cart - vertex1.coords_cart
+                        normal_vector2 = vertex3.coords_cart - vertex1.coords_cart
+
+                        normal_vector = np.cross(normal_vector1,normal_vector2)
+                        cross_prod = np.cross(point_center,normal_vector)
+
+                        if abs(np.mean(cross_prod)) < 1e-15:
+                            self.face_list.append(Face(vertex1,
+                                                       vertex2,
+                                                       vertex3))
+                            self.face_center.append(point_center)
+
+
+        #find vector from sphere center to the calulated triangle center
+        #Find normal vector to the triangle
+        #if the two vectors are parallel, then we have a face!
+        #need extra step to remove bigger triangles
+
+class Vertex:
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
+
+        self.coords_cart = np.array([self.x, self.y, self.z])
+
+    def convert2spherical(self):
+        self.r = np.sqrt(self.x**2 + self.y**2 + self.z**2)
+        self.lon = np.arccos(self.z/self.r)
+        self.colat = np.arctan(self.y/self.x)
+
+        self.coords_spher = np.array([self.r,self.lon,self.colat])
+
+    def scale_coords(self, scale_factor):
+        self.coords_cart *= scale_factor
+        self.x = self.coords_cart[0]
+        self.y = self.coords_cart[1]
+        self.z = self.coords_cart[2]
+
+class Face:
+    def __init__(self,v1,v2,v3):
+        self.vertices = [v1,v2,v3,v1]
+        self.vx = np.array([v1.x,v2.x,v3.x,v1.x])
+        self.vy = np.array([v1.y,v2.y,v3.y,v1.y])
+        self.vz = np.array([v1.z,v2.z,v3.z,v1.z])
+
+
+if __name__== '__main__':
+
+    import Shape
+
+    f = (1.0 + np.sqrt(5.0))/2.0
+
+    icosahedron = Shape.Shape()
+
+    # Define the 12 vertices of an icosahedra
+    v1 = Shape.Vertex(0, 1.0, f)
+    v2 = Shape.Vertex(0, -1.0, f)
+    v3 = Shape.Vertex(0, 1.0, -f)
+    v4 = Shape.Vertex(0, -1.0, -f)
+
+    v5 = Shape.Vertex(1.0, f, 0)
+    v6 = Shape.Vertex(-1.0, f, 0)
+    v7 = Shape.Vertex(1.0, -f, 0)
+    v8 = Shape.Vertex(-1.0, -f, 0)
+    #
+    v9 = Shape.Vertex(f, 0, 1.0)
+    v10 = Shape.Vertex(f, 0, -1.0)
+    v11 = Shape.Vertex(-f, 0, 1.0)
+    v12 = Shape.Vertex(-f, 0, -1.0)
+
+    icosahedron.add_vertex(v1)
+    icosahedron.add_vertex(v2)
+    icosahedron.add_vertex(v3)
+    icosahedron.add_vertex(v4)
+
+    icosahedron.add_vertex(v5)
+    icosahedron.add_vertex(v6)
+    icosahedron.add_vertex(v7)
+    icosahedron.add_vertex(v8)
+
+    icosahedron.add_vertex(v9)
+    icosahedron.add_vertex(v10)
+    icosahedron.add_vertex(v11)
+    icosahedron.add_vertex(v12)
+
+    icosahedron.print_vertex()
+
+    scale_factor = 1.0 / np.sin(2*np.pi/5) / 2.0
+
+    icosahedron.scale_vertex(scale_factor)
+
+    # icosahedron.print_vertex()
+
+    icosahedron.calc_faces()
+    # f1 = Shape.Face(v2,v8,v7)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i in icosahedron.vertex_list:
+        ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
+        plt.hold('on')
+
+    count = 0
+    for i in icosahedron.face_list:
+        ax.plot(i.vx,i.vy,i.vz)
+        print(icosahedron.face_center[count])
+        ax.scatter(icosahedron.face_center[count][0],
+                   icosahedron.face_center[count][1],
+                   icosahedron.face_center[count][2],
+                   'ro')
+        ax.set_aspect('equal')
+        plt.show()
+        count += 1
+        # plt.close()
+
+    ax.set_aspect('equal')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    plt.show()
+    plt.close()
+
