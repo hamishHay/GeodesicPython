@@ -30,12 +30,10 @@ class Shape:
             ylist.append(i.coords_cart[1])
             zlist.append(i.coords_cart[2])
 
-        return xlist,ylist,zlist
+        return xlist, ylist, zlist
 
     def calc_faces(self):
-        #calc center between each three points
-
-        # while len(self.face_list) < 12:
+        self.center_max = 0
         for vertex1 in self.vertex_list:
             for vertex2 in self.vertex_list:
                 if vertex1 == vertex2:
@@ -59,17 +57,23 @@ class Shape:
                         normal_vector = np.cross(normal_vector1,normal_vector2)
                         cross_prod = np.cross(point_center,normal_vector)
 
-                        if abs(np.mean(cross_prod)) < 1e-15:
+                        if np.mean(abs(cross_prod)) < 1e-15:
                             self.face_list.append(Face(vertex1,
                                                        vertex2,
                                                        vertex3))
                             self.face_center.append(point_center)
+                            self.center_max = max(self.center_max,np.linalg.norm(point_center))
 
+        rem_ind = []
+        for i in range(len(self.face_list)):
+            if np.linalg.norm(self.face_center[i]) < self.center_max*0.8:
+                rem_ind.append(i)
 
-        #find vector from sphere center to the calulated triangle center
-        #Find normal vector to the triangle
-        #if the two vectors are parallel, then we have a face!
-        #need extra step to remove bigger triangles
+        rem_ind =  np.sort(rem_ind)[::-1]
+
+        for i in rem_ind:
+            del self.face_list[i]
+            del self.face_center[i]
 
 class Vertex:
     def __init__(self, x, y, z):
@@ -139,41 +143,50 @@ if __name__== '__main__':
     icosahedron.add_vertex(v11)
     icosahedron.add_vertex(v12)
 
-    icosahedron.print_vertex()
-
     scale_factor = 1.0 / np.sin(2*np.pi/5) / 2.0
 
     icosahedron.scale_vertex(scale_factor)
 
-    # icosahedron.print_vertex()
-
     icosahedron.calc_faces()
-    # f1 = Shape.Face(v2,v8,v7)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    for i in icosahedron.vertex_list:
-        ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
-        plt.hold('on')
+    # for i in icosahedron.vertex_list:
+    #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
+    #     plt.hold('on')
 
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     count = 0
+    verts = []
     for i in icosahedron.face_list:
-        ax.plot(i.vx,i.vy,i.vz)
         print(icosahedron.face_center[count])
-        ax.scatter(icosahedron.face_center[count][0],
-                   icosahedron.face_center[count][1],
-                   icosahedron.face_center[count][2],
-                   'ro')
-        ax.set_aspect('equal')
-        plt.show()
+        v1 = [i.vx[0],i.vy[0],i.vz[0]]
+        v2 = [i.vx[1],i.vy[1],i.vz[1]]
+        v3 = [i.vx[2],i.vy[2],i.vz[2]]
+        verts = [v1,v2,v3]
+        polygon = Poly3DCollection([verts],alpha=0.5)
+        face_color = [153/255.0,255/255.0,153/255.0]
+        polygon.set_facecolor(face_color)
+        polygon.set_alpha(0.5)
+        ax.add_collection3d(polygon)
+        # ax.scatter(icosahedron.face_center[count][0],
+        #            icosahedron.face_center[count][1],
+        #            icosahedron.face_center[count][2],
+        #            marker='+',color='k')
+        # plt.show()
         count += 1
-        # plt.close()
 
     ax.set_aspect('equal')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
+    ax.set_xlim([1,-1])
+    ax.set_ylim([1,-1])
+    ax.set_zlim([1,-1])
+    # ax.set_xlabel('x')
+    # ax.set_ylabel('y')
+    # ax.set_zlabel('z')
+    plt.axis('off')
+    ax.set_axis_bgcolor(np.array([40.0,50.0,54.0])/255.0)
+    fig.savefig('totally_worth_the_time.pdf')
     plt.show()
     plt.close()
 
