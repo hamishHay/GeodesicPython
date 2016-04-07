@@ -53,3 +53,6 @@ icosahedron.png
 *.xml
 *.png
 __pycache__/Shape.cpython-35.pyc
+*.iml
+*.pdf
+*.pyc
