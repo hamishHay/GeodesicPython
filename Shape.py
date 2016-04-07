@@ -37,6 +37,25 @@ class Shape:
 
         return xlist, ylist, zlist
 
+    def remove_duplicates(self):
+        del_list = []
+        count = 0
+        print(len(self.vertex_list))
+        for i in range(len(self.vertex_list)):
+            count += 1
+            for j in range(len(self.vertex_list)):
+                if i != j:
+                    if self.vertex_list[i].coords_cart[0] == self.vertex_list[j].coords_cart[0] and self.vertex_list[i].coords_cart[1] == self.vertex_list[j].coords_cart[1] and self.vertex_list[i].coords_cart[2] == self.vertex_list[j].coords_cart[2]:
+                        print(i,j,self.vertex_list[i])
+                        if self.vertex_list[i].coords_cart[0] == 0 and self.vertex_list[i].coords_cart[1] == 0 and self.vertex_list[i].coords_cart[2] == 1:
+                            print("Mun")
+                        del_list.append(j)
+
+        del_list = np.unique(del_list)[::-1]
+
+        for i in del_list:
+            del self.vertex_list[i]
+
     def bisect_edges(self):
         min_len = []
         for i in self.face_list:
@@ -59,8 +78,8 @@ class Shape:
 
 
 
-        print(self.edge_len)
-        if self.edge_len != 0 or self.edge_len==0:
+        print(len(self.vertex_list))
+        if self.edge_len != 0:# or self.edge_len==0:
             # fig = plt.figure()
             # ax = fig.add_subplot(111, projection='3d')
             #
@@ -79,109 +98,137 @@ class Shape:
                         self.edge_len = min(self.edge_len,length)
             # self.edge_len = length
             print("edge len:",self.edge_len)
-            factor = 3
+            factor = 1.3
             for vertex1 in self.vertex_list:
                 for vertex2 in self.vertex_list:
                     vec1 = vertex2.coords_cart - vertex1.coords_cart
                     len1 = self.vec_length(vec1)
                     # if len1 == 0:# or len1 > self.edge_len:
                     #     break
-                    for vertex3 in self.vertex_list:
-                        vec2 = vertex3.coords_cart - vertex2.coords_cart
-                        len2 = self.vec_length(vec2)
-                        # if len2 == 0:# or len2 > self.edge_len:
-                        #     break
+                    if vertex1 != vertex2 and len1 <= self.edge_len*factor:
+                        for vertex3 in self.vertex_list:
+                            vec2 = vertex3.coords_cart - vertex2.coords_cart
+                            len2 = self.vec_length(vec2)
+                            if vertex1 != vertex3 and len2 <= self.edge_len*factor and vertex2 != vertex3 and len2 > 0:
 
-                        vec3 = vertex3.coords_cart - vertex1.coords_cart
-                        len3 = self.vec_length(vec3)
+                                # if len2 == 0:# or len2 > self.edge_len:
+                                #     break
 
-                        # if len3 == 0:
-                        #     break
-                        factor = 1.0001
-                        # print(len1,len2,len3)
-                        if len1 < self.edge_len*factor and len2 < self.edge_len*factor and len3 < self.edge_len*factor and len1 > 0 and len2 > 0 and len3 > 0:
+                                vec3 = vertex3.coords_cart - vertex1.coords_cart
+                                len3 = self.vec_length(vec3)
 
 
 
-                            # ax.set_aspect('equal')
-                            # ax.set_xlim([1,-1])
-                            # ax.set_ylim([1,-1])
-                            # ax.set_zlim([1,-1])
-                            #
-                            # s1 = ax.scatter(vertex1.coords_cart[0],
-                            #            vertex1.coords_cart[1],
-                            #            vertex1.coords_cart[2],
-                            #            marker='+',color='k')
-                            # s2 = ax.scatter(vertex2.coords_cart[0],
-                            #            vertex2.coords_cart[1],
-                            #            vertex2.coords_cart[2],
-                            #            marker='+',color='k')
-                            # s3 = ax.scatter(vertex3.coords_cart[0],
-                            #            vertex3.coords_cart[1],
-                            #            vertex3.coords_cart[2],
-                            #            marker='+',color='k')
-
-                            print(len1,len2,len3)
+                                # if len3 == 0:
+                                #     break
+                                # factor = 1.0001
+                                # print(len1,len2,len3)
+                                if len1 < self.edge_len*factor and len1> 0 and len2 < self.edge_len*factor and len2 > 0 and len3 < self.edge_len*factor and len3 > 0:
 
 
-                        point_center = np.array([np.mean([vertex1.coords_cart[0],
-                                                         vertex2.coords_cart[0],
-                                                         vertex3.coords_cart[0]]),
-                                                 np.mean([vertex1.coords_cart[1],
-                                                         vertex2.coords_cart[1],
-                                                         vertex3.coords_cart[1]]),
-                                                 np.mean([vertex1.coords_cart[2],
-                                                         vertex2.coords_cart[2],
-                                                         vertex3.coords_cart[2]])])
+
+                                    # ax.set_aspect('equal')
+                                    # ax.set_xlim([1,-1])
+                                    # ax.set_ylim([1,-1])
+                                    # ax.set_zlim([1,-1])
+                                    #
+                                    #
+                                    # s1 = ax.scatter(vertex1.coords_cart[0],
+                                    #            vertex1.coords_cart[1],
+                                    #            vertex1.coords_cart[2],
+                                    #            marker='+',color='k')
+                                    # s2 = ax.scatter(vertex2.coords_cart[0],
+                                    #            vertex2.coords_cart[1],
+                                    #            vertex2.coords_cart[2],
+                                    #            marker='+',color='k')
+                                    # s3 = ax.scatter(vertex3.coords_cart[0],
+                                    #            vertex3.coords_cart[1],
+                                    #            vertex3.coords_cart[2],
+                                    #            marker='+',color='k')
+
+                                    # print(len1,len2,len3)
+                                    a = 1
 
 
-                        center_len1 = self.vec_length(point_center - vertex1.coords_cart)
-                        center_len2 = self.vec_length(point_center - vertex2.coords_cart)
-                        center_len3 = self.vec_length(point_center - vertex3.coords_cart)
+                                    point_center = np.array([np.mean([vertex1.coords_cart[0],
+                                                                     vertex2.coords_cart[0],
+                                                                     vertex3.coords_cart[0]]),
+                                                             np.mean([vertex1.coords_cart[1],
+                                                                     vertex2.coords_cart[1],
+                                                                     vertex3.coords_cart[1]]),
+                                                             np.mean([vertex1.coords_cart[2],
+                                                                     vertex2.coords_cart[2],
+                                                                     vertex3.coords_cart[2]])])
 
-                        if abs(center_len1 - center_len2) < 1e-4 and abs(center_len1 - center_len3) < 1e-4 and abs(center_len2 - center_len3) < 1e-4 and len1 < self.edge_len*factor:
-                            # print(len1,len2)
-                            self.face_list.append(Face(vertex1,
-                                                       vertex2,
-                                                       vertex3,
-                                                       self))
-                            self.face_center.append(point_center)
-                            self.center_max = max(self.center_max,np.linalg.norm(point_center))
 
-                        # vec_center = point_center - vertex1.coords_cart
-                        # center_len = np.linalg.norm(vec_center)
-                        #
-                        # vec_ang = np.arccos(np.dot(vec1,vec2)/(len1*len2))*180/np.pi
-                        #
-                        # # print(vec1,vec2,vec_ang)
-                        #
-                        # normal_vector1 = vertex2.coords_cart - vertex1.coords_cart
-                        # normal_vector2 = vertex3.coords_cart - vertex1.coords_cart
-                        #
-                        # normal_vector = np.cross(normal_vector1,normal_vector2)
-                        # cross_prod = np.cross(point_center,normal_vector)
-                        #
-                        # if np.mean(abs(cross_prod)) < 1e-15 and len1 == self.edge_len and len2 == self.edge_len:
-                        #     print(np.mean(cross_prod),len1,len2)
-                        #     self.face_list.append(Face(vertex1,
-                        #                                    vertex2,
-                        #                                    vertex3,
-                        #                                    self))
-                        #     self.face_center.append(point_center)
-                        #     self.center_max = max(self.center_max,np.linalg.norm(point_center))
+                                    # center_len1 = self.vec_length(point_center - vertex1.coords_cart)
+                                    # center_len2 = self.vec_length(point_center - vertex2.coords_cart)
+                                    # center_len3 = self.vec_length(point_center - vertex3.coords_cart)
 
-                        # print(normal_vector1,
-                        #         normal_vector2,
-                        #         normal_vector)
-                        # if vec_ang < 60 and vec_ang > 40:
-                            # self.face_list.append(Face(vertex1,
-                            #                            vertex2,
-                            #                            vertex3,
-                            #                            self))
-                            # self.face_center.append(point_center)
-                            # self.center_max = max(self.center_max,np.linalg.norm(point_center))
+                                    # if abs(center_len1 - center_len2) < 1e-4 and abs(center_len1 - center_len3) < 1e-4 and abs(center_len2 - center_len3) < 1e-4 and len1 < self.edge_len*factor:
+                                    #     # print(len1,len2)
+                                    #     self.face_list.append(Face(vertex1,
+                                    #                                vertex2,
+                                    #                                vertex3,
+                                    #                                self))
+                                    #     self.face_center.append(point_center)
+                                    #     self.center_max = max(self.center_max,np.linalg.norm(point_center))
 
-                        # plt.cla()
+                                    # vec_center = point_center - vertex1.coords_cart
+                                    # center_len = np.linalg.norm(vec_center)
+                                    #
+                                    vec_ang = np.arccos(np.dot(vec1,vec2)/(len1*len2))*180/np.pi
+                                    #
+                                    # print(vec1,vec2,vec_ang)
+                                    a=1
+
+                                    if len(self.face_center) == 0:
+                                        self.face_list.append(Face(vertex1,
+                                                                       vertex2,
+                                                                       vertex3,
+                                                                       self))
+                                        self.face_center.append(point_center)
+
+                                    duplicate = False
+                                    for i in self.face_center:
+                                        if abs(i[0] - point_center[0]) + abs(i[1] - point_center[1]) + abs(i[2] - point_center[2]) < 1e-5:
+                                            duplicate = True
+
+                                    if not duplicate:
+                                        print("added face:", len(self.face_list))
+                                        self.face_list.append(Face(vertex1,
+                                                                   vertex2,
+                                                                   vertex3,
+                                                                   self))
+                                        self.face_center.append(point_center)
+                                    #
+                                    # normal_vector1 = vertex2.coords_cart - vertex1.coords_cart
+                                    # normal_vector2 = vertex3.coords_cart - vertex1.coords_cart
+                                    #
+                                    # normal_vector = np.cross(normal_vector1,normal_vector2)
+                                    # cross_prod = np.cross(point_center,normal_vector)
+                                    #
+                                    # if np.mean(abs(cross_prod)) < 1e-15 and len1 == self.edge_len and len2 == self.edge_len:
+                                    #     print(np.mean(cross_prod),len1,len2)
+                                    #     self.face_list.append(Face(vertex1,
+                                    #                                    vertex2,
+                                    #                                    vertex3,
+                                    #                                    self))
+                                    #     self.face_center.append(point_center)
+                                    #     self.center_max = max(self.center_max,np.linalg.norm(point_center))
+
+                                    # print(normal_vector1,
+                                    #         normal_vector2,
+                                    #         normal_vector)
+                                    # if vec_ang < 60 and vec_ang > 40:
+                                        # self.face_list.append(Face(vertex1,
+                                        #                            vertex2,
+                                        #                            vertex3,
+                                        #                            self))
+                                        # self.face_center.append(point_center)
+                                        # self.center_max = max(self.center_max,np.linalg.norm(point_center))
+
+                                    # plt.cla()
 
         else:
             for vertex1 in self.vertex_list:
@@ -278,9 +325,9 @@ class Face:
         for i in range(len(self.x_halves)):
             m.append(np.array([self.x_halves[i], self.y_halves[i], self.z_halves[i]]))
             length = np.linalg.norm(m[i])
-            self.x_halves[i] =  self.x_halves[i] * (1 + (1 - length))
-            self.y_halves[i] =  self.y_halves[i] * (1 + (1 - length))
-            self.z_halves[i] =  self.z_halves[i] * (1 + (1 - length))
+            self.x_halves[i] =  self.x_halves[i] * (1.0 + (1.0 - length))
+            self.y_halves[i] =  self.y_halves[i] * (1.0 + (1.0 - length))
+            self.z_halves[i] =  self.z_halves[i] * (1.0 + (1.0 - length))
 
             v.append(Vertex(self.x_halves[i],
                        self.y_halves[i],
@@ -331,6 +378,15 @@ if __name__== '__main__':
 
     icosahedron.scale_vertex(scale_factor)
 
+    icosahedron.calc_faces()
+
+    icosahedron.bisect_edges()
+    icosahedron.calc_faces()
+
+    icosahedron.bisect_edges()
+    icosahedron.calc_faces()
+
+    icosahedron.bisect_edges()
     icosahedron.calc_faces()
 
     icosahedron.bisect_edges()
