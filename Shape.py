@@ -60,12 +60,22 @@ class Shape:
 
 
         print(self.edge_len)
-        if self.edge_len != 0:
+        if self.edge_len != 0 or self.edge_len==0:
+            # fig = plt.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            #
+            # ax.set_aspect('equal')
+            # ax.set_xlim([1,-1])
+            # ax.set_ylim([1,-1])
+            # ax.set_zlim([1,-1])
+            # plt.show(block=False)
+
             for vertex1 in self.vertex_list:
                 for vertex2 in self.vertex_list:
                     length = np.sqrt(sum((vertex2.coords_cart - vertex1.coords_cart)**2))
                     if length > 0:
-                        print(length)
+                        if self.edge_len == 0:
+                            self.edge_len = length
                         self.edge_len = min(self.edge_len,length)
             # self.edge_len = length
             print("edge len:",self.edge_len)
@@ -74,14 +84,45 @@ class Shape:
                 for vertex2 in self.vertex_list:
                     vec1 = vertex2.coords_cart - vertex1.coords_cart
                     len1 = self.vec_length(vec1)
-                    # if len1 == self.edge_len*factor:
+                    # if len1 == 0:# or len1 > self.edge_len:
                     #     break
                     for vertex3 in self.vertex_list:
-                        vec2 = vertex3.coords_cart - vertex1.coords_cart
+                        vec2 = vertex3.coords_cart - vertex2.coords_cart
                         len2 = self.vec_length(vec2)
-                        # if len2 == self.edge_len*factor:
+                        # if len2 == 0:# or len2 > self.edge_len:
                         #     break
-                        # print(vec1,vec2)
+
+                        vec3 = vertex3.coords_cart - vertex1.coords_cart
+                        len3 = self.vec_length(vec3)
+
+                        # if len3 == 0:
+                        #     break
+                        factor = 1.0001
+                        # print(len1,len2,len3)
+                        if len1 < self.edge_len*factor and len2 < self.edge_len*factor and len3 < self.edge_len*factor and len1 > 0 and len2 > 0 and len3 > 0:
+
+
+
+                            # ax.set_aspect('equal')
+                            # ax.set_xlim([1,-1])
+                            # ax.set_ylim([1,-1])
+                            # ax.set_zlim([1,-1])
+                            #
+                            # s1 = ax.scatter(vertex1.coords_cart[0],
+                            #            vertex1.coords_cart[1],
+                            #            vertex1.coords_cart[2],
+                            #            marker='+',color='k')
+                            # s2 = ax.scatter(vertex2.coords_cart[0],
+                            #            vertex2.coords_cart[1],
+                            #            vertex2.coords_cart[2],
+                            #            marker='+',color='k')
+                            # s3 = ax.scatter(vertex3.coords_cart[0],
+                            #            vertex3.coords_cart[1],
+                            #            vertex3.coords_cart[2],
+                            #            marker='+',color='k')
+
+                            print(len1,len2,len3)
+
 
                         point_center = np.array([np.mean([vertex1.coords_cart[0],
                                                          vertex2.coords_cart[0],
@@ -98,8 +139,8 @@ class Shape:
                         center_len2 = self.vec_length(point_center - vertex2.coords_cart)
                         center_len3 = self.vec_length(point_center - vertex3.coords_cart)
 
-                        if abs(center_len1 - center_len2) < 1e-4 and abs(center_len1 - center_len3) < 1e-4 and abs(center_len2 - center_len3) < 1e-4 and len1 < 0.61 and len1>0:
-                            print(len1,len2)
+                        if abs(center_len1 - center_len2) < 1e-4 and abs(center_len1 - center_len3) < 1e-4 and abs(center_len2 - center_len3) < 1e-4 and len1 < self.edge_len*factor:
+                            # print(len1,len2)
                             self.face_list.append(Face(vertex1,
                                                        vertex2,
                                                        vertex3,
@@ -140,8 +181,7 @@ class Shape:
                             # self.face_center.append(point_center)
                             # self.center_max = max(self.center_max,np.linalg.norm(point_center))
 
-
-
+                        # plt.cla()
 
         else:
             for vertex1 in self.vertex_list:
@@ -193,6 +233,7 @@ class Shape:
             for i in rem_ind:
                 del self.face_list[i]
                 del self.face_center[i]
+
 
 class Vertex:
     def __init__(self, x, y, z):
@@ -298,6 +339,12 @@ if __name__== '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
+    ax.set_aspect('equal')
+    ax.set_xlim([1,-1])
+    ax.set_ylim([1,-1])
+    ax.set_zlim([1,-1])
+    plt.show(block=False)
+
     # for i in icosahedron.vertex_list:
     #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
     #     plt.hold('on')
@@ -325,7 +372,7 @@ if __name__== '__main__':
         #                i.y_halves[j],
         #                i.z_halves[j],
         #                marker='+',color='k')
-        #     # plt.show()
+        # plt.show()
         count += 1
     # for i in icosahedron.vertex_list:
     #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
