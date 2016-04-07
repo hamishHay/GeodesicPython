@@ -50,3 +50,6 @@ totally_worth_the_time.pdf
 *.pyc
 icosahedron.png
 *.png
+*.xml
+*.png
+__pycache__/Shape.cpython-35.pyc

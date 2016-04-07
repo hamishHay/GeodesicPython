@@ -76,18 +76,8 @@ class Shape:
         self.face_list = []
         self.face_center = []
 
-
-
         print(len(self.vertex_list))
-        if self.edge_len != 0:# or self.edge_len==0:
-            # fig = plt.figure()
-            # ax = fig.add_subplot(111, projection='3d')
-            #
-            # ax.set_aspect('equal')
-            # ax.set_xlim([1,-1])
-            # ax.set_ylim([1,-1])
-            # ax.set_zlim([1,-1])
-            # plt.show(block=False)
+        if self.edge_len != 0 or self.edge_len==0:
 
             for vertex1 in self.vertex_list:
                 for vertex2 in self.vertex_list:
@@ -96,7 +86,7 @@ class Shape:
                         if self.edge_len == 0:
                             self.edge_len = length
                         self.edge_len = min(self.edge_len,length)
-            # self.edge_len = length
+
             print("edge len:",self.edge_len)
             factor = 1.3
             for vertex1 in self.vertex_list:
@@ -126,30 +116,6 @@ class Shape:
                                 if len1 < self.edge_len*factor and len1> 0 and len2 < self.edge_len*factor and len2 > 0 and len3 < self.edge_len*factor and len3 > 0:
 
 
-
-                                    # ax.set_aspect('equal')
-                                    # ax.set_xlim([1,-1])
-                                    # ax.set_ylim([1,-1])
-                                    # ax.set_zlim([1,-1])
-                                    #
-                                    #
-                                    # s1 = ax.scatter(vertex1.coords_cart[0],
-                                    #            vertex1.coords_cart[1],
-                                    #            vertex1.coords_cart[2],
-                                    #            marker='+',color='k')
-                                    # s2 = ax.scatter(vertex2.coords_cart[0],
-                                    #            vertex2.coords_cart[1],
-                                    #            vertex2.coords_cart[2],
-                                    #            marker='+',color='k')
-                                    # s3 = ax.scatter(vertex3.coords_cart[0],
-                                    #            vertex3.coords_cart[1],
-                                    #            vertex3.coords_cart[2],
-                                    #            marker='+',color='k')
-
-                                    # print(len1,len2,len3)
-                                    a = 1
-
-
                                     point_center = np.array([np.mean([vertex1.coords_cart[0],
                                                                      vertex2.coords_cart[0],
                                                                      vertex3.coords_cart[0]]),
@@ -159,28 +125,6 @@ class Shape:
                                                              np.mean([vertex1.coords_cart[2],
                                                                      vertex2.coords_cart[2],
                                                                      vertex3.coords_cart[2]])])
-
-
-                                    # center_len1 = self.vec_length(point_center - vertex1.coords_cart)
-                                    # center_len2 = self.vec_length(point_center - vertex2.coords_cart)
-                                    # center_len3 = self.vec_length(point_center - vertex3.coords_cart)
-
-                                    # if abs(center_len1 - center_len2) < 1e-4 and abs(center_len1 - center_len3) < 1e-4 and abs(center_len2 - center_len3) < 1e-4 and len1 < self.edge_len*factor:
-                                    #     # print(len1,len2)
-                                    #     self.face_list.append(Face(vertex1,
-                                    #                                vertex2,
-                                    #                                vertex3,
-                                    #                                self))
-                                    #     self.face_center.append(point_center)
-                                    #     self.center_max = max(self.center_max,np.linalg.norm(point_center))
-
-                                    # vec_center = point_center - vertex1.coords_cart
-                                    # center_len = np.linalg.norm(vec_center)
-                                    #
-                                    vec_ang = np.arccos(np.dot(vec1,vec2)/(len1*len2))*180/np.pi
-                                    #
-                                    # print(vec1,vec2,vec_ang)
-                                    a=1
 
                                     if len(self.face_center) == 0:
                                         self.face_list.append(Face(vertex1,
@@ -201,34 +145,6 @@ class Shape:
                                                                    vertex3,
                                                                    self))
                                         self.face_center.append(point_center)
-                                    #
-                                    # normal_vector1 = vertex2.coords_cart - vertex1.coords_cart
-                                    # normal_vector2 = vertex3.coords_cart - vertex1.coords_cart
-                                    #
-                                    # normal_vector = np.cross(normal_vector1,normal_vector2)
-                                    # cross_prod = np.cross(point_center,normal_vector)
-                                    #
-                                    # if np.mean(abs(cross_prod)) < 1e-15 and len1 == self.edge_len and len2 == self.edge_len:
-                                    #     print(np.mean(cross_prod),len1,len2)
-                                    #     self.face_list.append(Face(vertex1,
-                                    #                                    vertex2,
-                                    #                                    vertex3,
-                                    #                                    self))
-                                    #     self.face_center.append(point_center)
-                                    #     self.center_max = max(self.center_max,np.linalg.norm(point_center))
-
-                                    # print(normal_vector1,
-                                    #         normal_vector2,
-                                    #         normal_vector)
-                                    # if vec_ang < 60 and vec_ang > 40:
-                                        # self.face_list.append(Face(vertex1,
-                                        #                            vertex2,
-                                        #                            vertex3,
-                                        #                            self))
-                                        # self.face_center.append(point_center)
-                                        # self.center_max = max(self.center_max,np.linalg.norm(point_center))
-
-                                    # plt.cla()
 
         else:
             for vertex1 in self.vertex_list:
@@ -324,10 +240,12 @@ class Face:
         v = []
         for i in range(len(self.x_halves)):
             m.append(np.array([self.x_halves[i], self.y_halves[i], self.z_halves[i]]))
-            length = np.linalg.norm(m[i])
-            self.x_halves[i] =  self.x_halves[i] * (1.0 + (1.0 - length))
-            self.y_halves[i] =  self.y_halves[i] * (1.0 + (1.0 - length))
-            self.z_halves[i] =  self.z_halves[i] * (1.0 + (1.0 - length))
+            while 1 - np.linalg.norm(m[i]) > 1e-15:
+                length = 2.0 - np.linalg.norm(m[i])
+                self.x_halves[i] =  self.x_halves[i] * length
+                self.y_halves[i] =  self.y_halves[i] * length
+                self.z_halves[i] =  self.z_halves[i] * length
+                m[-1] = np.array([self.x_halves[i], self.y_halves[i], self.z_halves[i]])
 
             v.append(Vertex(self.x_halves[i],
                        self.y_halves[i],
@@ -380,17 +298,9 @@ if __name__== '__main__':
 
     icosahedron.calc_faces()
 
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
-
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
-
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
-
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
+    for i in range(3):
+        icosahedron.bisect_edges()
+        icosahedron.calc_faces()
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -401,9 +311,10 @@ if __name__== '__main__':
     ax.set_zlim([1,-1])
     plt.show(block=False)
 
-    # for i in icosahedron.vertex_list:
-    #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
-    #     plt.hold('on')
+    for i in icosahedron.vertex_list:
+        # ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
+        print(np.sqrt(i.coords_cart[0]**2 + i.coords_cart[1]**2 + i.coords_cart[2]**2))
+        # plt.hold('on')
     # plt.show()
 
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -443,6 +354,7 @@ if __name__== '__main__':
     # ax.set_zlabel('z')
     plt.axis('off')
     ax.set_axis_bgcolor(np.array([40.0,50.0,54.0])/255.0)
-    fig.savefig('icosahedron.png')
+    fig.savefig('geodesic3.png',bbox_inches='tight')
+    fig.savefig('geodesic3.pdf',bbox_inches='tight')
     plt.show()
     plt.close()
