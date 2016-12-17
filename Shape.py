@@ -140,7 +140,7 @@ class Shape:
                                             duplicate = True
 
                                     if not duplicate:
-                                        print("added face:", len(self.face_list))
+                                        # print("added face:", len(self.face_list))
                                         self.face_list.append(Face(vertex1,
                                                                    vertex2,
                                                                    vertex3,
@@ -322,10 +322,13 @@ if __name__== '__main__':
 
     icosahedron.calc_faces()
 
-    for i in range(3):
+    for i in range(2):
         icosahedron.bisect_edges()
         icosahedron.scale_vertex(scale_factor)
         icosahedron.calc_faces()
+
+
+
     # fig = plt.figure()
     # ax = fig.add_subplot(111)#, projection='3d')
     #
@@ -335,9 +338,9 @@ if __name__== '__main__':
     # # ax.set_zlim([1,-1])
     # plt.show(block=False)
 
-    for i in icosahedron.vertex_list:
-        # ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
-        print(np.sqrt(i.coords_cart[0]**2 + i.coords_cart[1]**2 + i.coords_cart[2]**2))
+    # for i in icosahedron.vertex_list:
+    #     # ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
+    #     print(np.sqrt(i.coords_cart[0]**2 + i.coords_cart[1]**2 + i.coords_cart[2]**2))
         # plt.hold('on')
     # plt.show()
 
@@ -371,7 +374,7 @@ if __name__== '__main__':
 
     mag_max = min(mag)
 
-    print(mag_max)
+    print("MAX: ", mag_max)
 
     friends = np.ones((len(b), 6))*-1
 
@@ -383,7 +386,7 @@ if __name__== '__main__':
                 mag += (b[i][k] - b[j][k])**2
             mag = np.sqrt(mag)
 
-            # print(mag)
+            print(mag)
             if mag > 0 and mag < mag_max*1.2:
                 friends[i][counti[i]] = j
                 counti[i] += 1
@@ -392,6 +395,8 @@ if __name__== '__main__':
                 jsph = cart2sph(b[j][0], b[j][1], b[j][2])
 
             mag = 0
+
+    # print(friends)
 
     # m = Basemap(projection='hammer',lon_0=180)
     # x, y = m(lons,lats)
