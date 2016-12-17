@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.basemap import Basemap
 from scipy.stats import mode
 
 class Shape:
@@ -201,34 +202,7 @@ class Shape:
                                                                    vertex3,
                                                                    self))
                                         self.face_center.append(point_center)
-                                    #
-                                    # normal_vector1 = vertex2.coords_cart - vertex1.coords_cart
-                                    # normal_vector2 = vertex3.coords_cart - vertex1.coords_cart
-                                    #
-                                    # normal_vector = np.cross(normal_vector1,normal_vector2)
-                                    # cross_prod = np.cross(point_center,normal_vector)
-                                    #
-                                    # if np.mean(abs(cross_prod)) < 1e-15 and len1 == self.edge_len and len2 == self.edge_len:
-                                    #     print(np.mean(cross_prod),len1,len2)
-                                    #     self.face_list.append(Face(vertex1,
-                                    #                                    vertex2,
-                                    #                                    vertex3,
-                                    #                                    self))
-                                    #     self.face_center.append(point_center)
-                                    #     self.center_max = max(self.center_max,np.linalg.norm(point_center))
 
-                                    # print(normal_vector1,
-                                    #         normal_vector2,
-                                    #         normal_vector)
-                                    # if vec_ang < 60 and vec_ang > 40:
-                                        # self.face_list.append(Face(vertex1,
-                                        #                            vertex2,
-                                        #                            vertex3,
-                                        #                            self))
-                                        # self.face_center.append(point_center)
-                                        # self.center_max = max(self.center_max,np.linalg.norm(point_center))
-
-                                    # plt.cla()
 
         else:
             for vertex1 in self.vertex_list:
@@ -287,6 +261,7 @@ class Vertex:
         self.x = x
         self.y = y
         self.z = z
+        self.ID = 0
 
         self.coords_cart = np.array([self.x, self.y, self.z])
 
@@ -302,6 +277,18 @@ class Vertex:
         self.x = self.coords_cart[0]
         self.y = self.coords_cart[1]
         self.z = self.coords_cart[2]
+
+        ds = abs(1.0 - np.sqrt(sum(self.coords_cart**2)))
+        # print(ds)
+        while ds > 1e-12:
+            self.coords_cart *= (ds + 1.0)
+            self.x = self.coords_cart[0]
+            self.y = self.coords_cart[1]
+            self.z = self.coords_cart[2]
+
+            ds = abs(1.0 - np.sqrt(sum(self.coords_cart**2)))
+
+
 
 class Face:
     def __init__(self,v1,v2,v3,shape):
@@ -336,6 +323,16 @@ class Face:
 
 
 if __name__== '__main__':
+
+    def cart2sph(x,y,z):
+        r = np.sqrt(x**2 + y**2 + z**2)
+        lat = np.pi*0.5 - np.arccos(z/r)
+        lon = np.arctan2(y,x)
+
+
+        if np.rad2deg(lon)+180.0 > 359.9:
+            return [r, np.rad2deg(lat), 0.0]
+        return [r, np.rad2deg(lat), np.rad2deg(lon)+180.0]
 
     import Shape
 
@@ -380,69 +377,184 @@ if __name__== '__main__':
 
     icosahedron.calc_faces()
 
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
+    for i in range(3):
+        icosahedron.bisect_edges()
+        icosahedron.scale_vertex(scale_factor)
+        icosahedron.calc_faces()
 
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
-
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
-
-    icosahedron.bisect_edges()
-    icosahedron.calc_faces()
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.set_aspect('equal')
-    ax.set_xlim([1,-1])
-    ax.set_ylim([1,-1])
-    ax.set_zlim([1,-1])
-    plt.show(block=False)
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)#, projection='3d')
+    #
+    # ax.set_aspect('equal')
+    # # ax.set_xlim([1,-1])
+    # # ax.set_ylim([1,-1])
+    # # ax.set_zlim([1,-1])
+    # plt.show(block=False)
 
     # for i in icosahedron.vertex_list:
     #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
     #     plt.hold('on')
     # plt.show()
 
-    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-    count = 0
-    verts = []
-    for i in icosahedron.face_list:
-        v1 = [i.vx[0],i.vy[0],i.vz[0]]
-        v2 = [i.vx[1],i.vy[1],i.vz[1]]
-        v3 = [i.vx[2],i.vy[2],i.vz[2]]
-        verts = [v1,v2,v3]
-        polygon = Poly3DCollection([verts],alpha=0.5)
-        face_color = np.array([153,255,153])/255.0
-        polygon.set_facecolor(face_color)
-        polygon.set_alpha(0.5)
-        ax.add_collection3d(polygon)
-        # ax.scatter(icosahedron.face_center[count][0],
-        #            icosahedron.face_center[count][1],
-        #            icosahedron.face_center[count][2],
-        #            marker='+',color='k')
-        # for j in range(3):
-        #     ax.scatter(i.x_halves[j],
-        #                i.y_halves[j],
-        #                i.z_halves[j],
-        #                marker='+',color='k')
-        # plt.show()
-        count += 1
-    # for i in icosahedron.vertex_list:
-    #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
-    #     plt.hold('on')
+    # print(icosahedron.vertex_list)
 
-    ax.set_aspect('equal')
-    ax.set_xlim([1,-1])
-    ax.set_ylim([1,-1])
-    ax.set_zlim([1,-1])
-    # ax.set_xlabel('x')
-    # ax.set_ylabel('y')
-    # ax.set_zlabel('z')
-    plt.axis('off')
-    ax.set_axis_bgcolor(np.array([40.0,50.0,54.0])/255.0)
-    fig.savefig('icosahedron.png')
+    all_vertices = []
+    for i in icosahedron.face_list:
+        for j in range(3):
+            all_vertices.append([i.vx[j],i.vy[j],i.vz[j]])
+
+    bset = set(tuple(x) for x in all_vertices)
+    b = [list(x) for x in bset]
+
+    lats = []
+    lons = []
+    for i in range(len(b)):
+        sph = cart2sph(b[i][0], b[i][1], b[i][2])
+        lats.append(sph[1])
+        lons.append(sph[2])
+
+    lats = np.array(lats)
+    lons = np.array(lons)
+
+
+    mag = []
+    for coord in b[1:]:
+        mag.append(0)
+        for i in range(3):
+            mag[-1] += (b[0][i]-coord[i])**2
+        mag[-1] = np.sqrt(mag[-1])
+
+    mag_max = min(mag)
+
+    print(mag_max)
+
+    friends = np.ones((len(b), 6))*-1
+
+    mag = 0
+    counti = np.zeros(len(b))
+    for i in range(len(b)):
+        for j in range(len(b)):
+            for k in range(3):
+                mag += (b[i][k] - b[j][k])**2
+            mag = np.sqrt(mag)
+
+            # print(mag)
+            if mag > 0 and mag < mag_max*1.2:
+                friends[i][counti[i]] = j
+                counti[i] += 1
+
+                isph = cart2sph(b[i][0], b[i][1], b[i][2])
+                jsph = cart2sph(b[j][0], b[j][1], b[j][2])
+
+            mag = 0
+
+    # m = Basemap(projection='hammer',lon_0=180)
+    # x, y = m(lons,lats)
+    # m.scatter(x,y,color='b')
+    # plt.show()
+
+
+    # m = Basemap(projection='hammer',lon_0=180)
+    m = Basemap(projection='ortho',lon_0=-105,lat_0=40)
+    x, y = m(lons,lats)
+    m.scatter(x,y,marker='o',s=2,color='k')
+
+    # num = 5
+    # x20, y20 = m(lons[num],lats[num])
+    #
+    # num = 12
+    # x2, y2 = m(lons[num],lats[num])
+    # m.drawgreatcircle(lons[5],lats[5],lons[8],lats[8])
+
+    # ax.scatter(lons,lats,c='b')
+    #
+    for num in range(len(b)):
+    # x, y = m(lons,lats)
+        x20, y20 = m(lons[num],lats[num])
+        # m.scatter(x20,y20,marker='o',s=6,color='r')
+
+        mag = 0
+        for i in friends[num]:
+            # for k in range(3):
+            #     mag += (b[num][k] - b[int(i)][k])**2
+            # mag = np.sqrt(mag)
+            if i >= 0:# and (x20 != 0 or x20 <350)  and (x2 != 0 or x20 <350):
+                x2, y2 = m(lons[i],lats[i])
+                # m.plot([x20,x2],[y20,y2],color='k')
+                # if (lons[num] != 0 and lons[i] < 350) or (lons[i] != 0 and lons[num] < 350):
+                m.drawgreatcircle(lons[num],lats[num],lons[i],lats[i],c='k')
     plt.show()
-    plt.close()
+
+    #
+    #
+    # num = 97
+    # ax.scatter(lons[num],lats[num],c='pink')
+    # for i in friends[num]:
+    #     ax.scatter(lons[i],lats[i],c='pink')
+    #
+    #
+    # num = 112
+    # ax.scatter(lons[num],lats[num],c='cyan')
+    # for i in friends[num]:
+    #     if i >= 0:
+    #         ax.scatter(lons[i],lats[i],c='cyan')
+    #
+    #
+    # ax.set_xlim([0,360])
+    # ax.set_ylim([90,-90])
+    # plt.show()
+    # # from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+    # # count = 0
+    # # verts = []
+    # # for i in icosahedron.face_list:
+    # #     v1 = [i.vx[0],i.vy[0],i.vz[0]]
+    # #     v2 = [i.vx[1],i.vy[1],i.vz[1]]
+    # #     v3 = [i.vx[2],i.vy[2],i.vz[2]]
+    # #     verts = [v1,v2,v3]
+    # #     polygon = Poly3DCollection([verts],alpha=0.5)
+    # #     face_color = np.array([153,255,153])/255.0
+    # #     polygon.set_facecolor(face_color)
+    # #     polygon.set_alpha(0.5)
+    # #     ax.add_collection3d(polygon)
+    # #     # ax.scatter(icosahedron.face_center[count][0],
+    # #     #            icosahedron.face_center[count][1],
+    # #     #            icosahedron.face_center[count][2],
+    # #     #            marker='+',color='k')
+    # #     # for j in range(3):
+    # #     #     ax.scatter(i.x_halves[j],
+    # #     #                i.y_halves[j],
+    # #     #                i.z_halves[j],
+    # #     #                marker='+',color='k')
+    # #     # plt.show()
+    # #     count += 1
+    # # # for i in icosahedron.vertex_list:
+    # # #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
+    # # #     plt.hold('on')
+    # #
+    # # ax.set_aspect('equal')
+    # # ax.set_xlim([1,-1])
+    # # ax.set_ylim([1,-1])
+    # # ax.set_zlim([1,-1])
+    # # # ax.set_xlabel('x')
+    # # # ax.set_ylabel('y')
+    # # # ax.set_zlabel('z')
+    # # plt.axis('off')
+    # # ax.set_axis_bgcolor(np.array([40.0,50.0,54.0])/255.0)
+    # # fig.savefig('icosahedron.pdf',bbox_inches='tight')
+    # # plt.show()
+    # # plt.close()
+    #
+    #
+    # #write file?
+    f = open('myfile.txt','w')
+    for i in range(len(b)):
+        f.write('{:<5d} {: >10.6f}   {: >10.6f}   '.format(i, lats[i], lons[i])) # python will convert \n to os.linesep
+        string = '{'
+        for j in range(len(friends[0])):
+            string += '{:3d}'.format(int(friends[i][j]))
+            if j < len(friends[0]) - 1:
+                string += ', '
+            else:
+                string += '}\n'
+        f.write(string)
+    f.close() # you can omit in most cases as the destructor will call it
