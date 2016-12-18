@@ -322,21 +322,23 @@ if __name__== '__main__':
 
     icosahedron.calc_faces()
 
-    for i in range(2):
+
+    for i in range(0):
         icosahedron.bisect_edges()
         icosahedron.scale_vertex(scale_factor)
         icosahedron.calc_faces()
 
-
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)#, projection='3d')
+    icosahedron.bisect_edges()
+    icosahedron.calc_faces()
     #
-    # ax.set_aspect('equal')
-    # # ax.set_xlim([1,-1])
-    # # ax.set_ylim([1,-1])
-    # # ax.set_zlim([1,-1])
-    # plt.show(block=False)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.set_aspect('equal')
+    # ax.set_xlim([1,-1])
+    # ax.set_ylim([1,-1])
+    # ax.set_zlim([1,-1])
+    plt.show(block=False)
 
     # for i in icosahedron.vertex_list:
     #     # ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
@@ -352,49 +354,49 @@ if __name__== '__main__':
             all_vertices.append([i.vx[j],i.vy[j],i.vz[j]])
 
     bset = set(tuple(x) for x in all_vertices)
-    b = [list(x) for x in bset]
-
-    lats = []
-    lons = []
-    for i in range(len(b)):
-        sph = cart2sph(b[i][0], b[i][1], b[i][2])
-        lats.append(sph[1])
-        lons.append(sph[2])
-
-    lats = np.array(lats)
-    lons = np.array(lons)
-
-
-    mag = []
-    for coord in b[1:]:
-        mag.append(0)
-        for i in range(3):
-            mag[-1] += (b[0][i]-coord[i])**2
-        mag[-1] = np.sqrt(mag[-1])
-
-    mag_max = min(mag)
-
-    print("MAX: ", mag_max)
-
-    friends = np.ones((len(b), 6))*-1
-
-    mag = 0
-    counti = np.zeros(len(b))
-    for i in range(len(b)):
-        for j in range(len(b)):
-            for k in range(3):
-                mag += (b[i][k] - b[j][k])**2
-            mag = np.sqrt(mag)
-
-            print(mag)
-            if mag > 0 and mag < mag_max*1.2:
-                friends[i][counti[i]] = j
-                counti[i] += 1
-
-                isph = cart2sph(b[i][0], b[i][1], b[i][2])
-                jsph = cart2sph(b[j][0], b[j][1], b[j][2])
-
-            mag = 0
+    # b = [list(x) for x in bset]
+    #
+    # lats = []
+    # lons = []
+    # for i in range(len(b)):
+    #     sph = cart2sph(b[i][0], b[i][1], b[i][2])
+    #     lats.append(sph[1])
+    #     lons.append(sph[2])
+    #
+    # lats = np.array(lats)
+    # lons = np.array(lons)
+    #
+    #
+    # mag = []
+    # for coord in b[1:]:
+    #     mag.append(0)
+    #     for i in range(3):
+    #         mag[-1] += (b[0][i]-coord[i])**2
+    #     mag[-1] = np.sqrt(mag[-1])
+    #
+    # mag_max = min(mag)
+    #
+    # print("MAX: ", mag_max)
+    #
+    # friends = np.ones((len(b), 6))*-1
+    #
+    # mag = 0
+    # counti = np.zeros(len(b))
+    # for i in range(len(b)):
+    #     for j in range(len(b)):
+    #         for k in range(3):
+    #             mag += (b[i][k] - b[j][k])**2
+    #         mag = np.sqrt(mag)
+    #
+    #         print(mag)
+    #         if mag > 0 and mag < mag_max*1.2:
+    #             friends[i][counti[i]] = j
+    #             counti[i] += 1
+    #
+    #             isph = cart2sph(b[i][0], b[i][1], b[i][2])
+    #             jsph = cart2sph(b[j][0], b[j][1], b[j][2])
+    #
+    #         mag = 0
 
     # print(friends)
 
@@ -405,9 +407,9 @@ if __name__== '__main__':
 
 
     # m = Basemap(projection='hammer',lon_0=180)
-    m = Basemap(projection='ortho',lon_0=-105,lat_0=40)
-    x, y = m(lons,lats)
-    m.scatter(x,y,marker='o',s=2,color='k')
+    # m = Basemap(projection='ortho',lon_0=-105,lat_0=40)
+    # x, y = m(lons,lats)
+    # m.scatter(x,y,marker='o',s=2,color='k')
 
     # num = 5
     # x20, y20 = m(lons[num],lats[num])
@@ -418,23 +420,23 @@ if __name__== '__main__':
 
     # ax.scatter(lons,lats,c='b')
     #
-    for num in range(len(b)):
-    # x, y = m(lons,lats)
-        x20, y20 = m(lons[num],lats[num])
-        # m.scatter(x20,y20,marker='o',s=6,color='r')
-
-        mag = 0
-        for i in friends[num]:
-            # for k in range(3):
-            #     mag += (b[num][k] - b[int(i)][k])**2
-            # mag = np.sqrt(mag)
-            if i >= 0:# and (x20 != 0 or x20 <350)  and (x2 != 0 or x20 <350):
-                x2, y2 = m(lons[i],lats[i])
-                # m.plot([x20,x2],[y20,y2],color='k')
-                # if (lons[num] != 0 and lons[i] < 350) or (lons[i] != 0 and lons[num] < 350):
-                m.drawgreatcircle(lons[num],lats[num],lons[i],lats[i],c='k')
-
-    plt.show()
+    # for num in range(len(b)):
+    # # x, y = m(lons,lats)
+    #     x20, y20 = m(lons[num],lats[num])
+    #     # m.scatter(x20,y20,marker='o',s=6,color='r')
+    #
+    #     mag = 0
+    #     for i in friends[num]:
+    #         # for k in range(3):
+    #         #     mag += (b[num][k] - b[int(i)][k])**2
+    #         # mag = np.sqrt(mag)
+    #         if i >= 0:# and (x20 != 0 or x20 <350)  and (x2 != 0 or x20 <350):
+    #             x2, y2 = m(lons[i],lats[i])
+    #             # m.plot([x20,x2],[y20,y2],color='k')
+    #             # if (lons[num] != 0 and lons[i] < 350) or (lons[i] != 0 and lons[num] < 350):
+    #             m.drawgreatcircle(lons[num],lats[num],lons[i],lats[i],c='k')
+    #
+    # plt.show()
 
     #
     #
@@ -454,46 +456,49 @@ if __name__== '__main__':
     # ax.set_xlim([0,360])
     # ax.set_ylim([90,-90])
     # plt.show()
-    # # from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-    # # count = 0
-    # # verts = []
-    # # for i in icosahedron.face_list:
-    # #     v1 = [i.vx[0],i.vy[0],i.vz[0]]
-    # #     v2 = [i.vx[1],i.vy[1],i.vz[1]]
-    # #     v3 = [i.vx[2],i.vy[2],i.vz[2]]
-    # #     verts = [v1,v2,v3]
-    # #     polygon = Poly3DCollection([verts],alpha=0.5)
-    # #     face_color = np.array([153,255,153])/255.0
-    # #     polygon.set_facecolor(face_color)
-    # #     polygon.set_alpha(0.5)
-    # #     ax.add_collection3d(polygon)
-    # #     # ax.scatter(icosahedron.face_center[count][0],
-    # #     #            icosahedron.face_center[count][1],
-    # #     #            icosahedron.face_center[count][2],
-    # #     #            marker='+',color='k')
-    # #     # for j in range(3):
-    # #     #     ax.scatter(i.x_halves[j],
-    # #     #                i.y_halves[j],
-    # #     #                i.z_halves[j],
-    # #     #                marker='+',color='k')
-    # #     # plt.show()
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+    count = 0
+    verts = []
+    for i in icosahedron.face_list:
+        v1 = [i.vx[0],i.vy[0],i.vz[0]]
+        v2 = [i.vx[1],i.vy[1],i.vz[1]]
+        v3 = [i.vx[2],i.vy[2],i.vz[2]]
+        verts = [v1,v2,v3]
+        polygon = Poly3DCollection([verts],alpha=1.0)
+        face_color = np.array([153,255,153])/255.0
+        polygon.set_facecolor(face_color)
+        polygon.set_alpha(0.5)
+        ax.add_collection3d(polygon)
+        # ax.scatter(icosahedron.face_center[count][0],
+        #            icosahedron.face_center[count][1],
+        #            icosahedron.face_center[count][2],
+        #            marker='+',color='k')
+        # for j in range(3):
+        #     ax.scatter(i.x_halves[j],
+        #                i.y_halves[j],
+        #                i.z_halves[j],
+        #                marker='+',color='k')
+    # plt.show()
     # #     count += 1
     # # # for i in icosahedron.vertex_list:
     # # #     ax.scatter(i.coords_cart[0],i.coords_cart[1],i.coords_cart[2])
     # # #     plt.hold('on')
     # #
-    # # ax.set_aspect('equal')
-    # # ax.set_xlim([1,-1])
-    # # ax.set_ylim([1,-1])
-    # # ax.set_zlim([1,-1])
-    # # # ax.set_xlabel('x')
-    # # # ax.set_ylabel('y')
-    # # # ax.set_zlabel('z')
-    # # plt.axis('off')
-    # # ax.set_axis_bgcolor(np.array([40.0,50.0,54.0])/255.0)
+    ax.set_aspect('equal')
+    ax.set_xlim([1,-1])
+    ax.set_ylim([1,-1])
+    ax.set_zlim([1,-1])
+    ax.set_ylabel('y')
+    ax.set_xlabel('x')
+    ax.set_zlabel('z')
+    # plt.axis('off')
+    # ax.set_axis_bgcolor(np.array([40.0,50.0,54.0])/255.0)
     # # fig.savefig('icosahedron.pdf',bbox_inches='tight')
-    # # plt.show()
-    # # plt.close()
+
+    ax.view_init(elev=60.0, azim=0)
+
+    plt.show()
+    # plt.close()
     #
     #
     # #write file?
