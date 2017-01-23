@@ -176,7 +176,7 @@ class Shape:
 
             print(self.friends[i], self.normals[i])
 
-    def arclength(self):
+    #def arclength(self):
 
 
     def cart2sph(self,coords):
