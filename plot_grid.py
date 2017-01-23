@@ -5,7 +5,7 @@ from mpl_toolkits.basemap import Basemap
 
 #grid = np.loadtxt('grid_l4.txt').T
 
-load_file = 'grid_l6_test.txt'
+load_file = 'grid_l4_test.txt'
 
 f = open(load_file,'r')
 lines = f.readlines()

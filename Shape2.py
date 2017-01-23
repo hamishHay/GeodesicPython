@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.basemap import Basemap
 from scipy.stats import mode
+import sys
 
 class Shape:
     def __init__(self):
@@ -100,6 +101,97 @@ class Shape:
                 self.vertex_list[i] = np.dot(self.rotation_matrix(axis,theta), self.vertex_list[i])
             # print(np.dot(rotation_matrix(axis,theta), icosahedron.vertex_list[i]))
 
+    def order_friends(self):
+        for i in range(len(self.vertex_list)):
+            point1 = self.cart2sph(self.vertex_list[i])[1:]
+
+            pentagon = 0
+            if (self.friends[i][-1] < 0):
+                pentagon = 1
+
+            lons = []
+            for j in range(len(self.friends[i])-pentagon):
+                lons.append(self.cart2sph(self.vertex_list[int(self.friends[i][j])])[2])
+
+            transform_ind = np.zeros(6)
+            if point1[1] < 30.0 and max(lons) > 300:
+                for j in range(len(self.friends[i])-pentagon):
+                    if (lons[j] > 300.0):
+                        transform_ind[j] = -(360.0-lons[j])
+            elif point1[1] > 300.0 and min(lons) < 30.0:
+                for j in range(len(self.friends[i])-pentagon):
+                    if (lons[j] < 300.0):
+                        transform_ind[j] = 360.0 + lons[j]
+
+            mag_north = 1.0
+            north_vector = np.array([-1.0, 0.0])
+
+            angles = []
+
+            for j in range(len(self.friends[i])-pentagon):
+                point2 = self.cart2sph(self.vertex_list[int(self.friends[i][j])])[1:]
+                if transform_ind[j] != 0.0:
+                    point2[1] = transform_ind[j]
+                vector = point2 - point1
+                dot = np.dot(north_vector,vector)
+                det = north_vector[0]*vector[1] - north_vector[1]*vector[0]
+                angle = np.arctan2(det,dot)
+
+                angles.append(np.rad2deg(angle)+180.0)
+
+            count = 0
+            temp = []
+            while count < len(angles):
+                ind = np.argmin(angles)
+                temp.append(int(self.friends[i][ind]))
+                angles[ind] = 1000
+                count+=1
+
+            if pentagon:
+                temp.append(-1)
+            self.friends[i] = temp
+
+
+    def find_normals(self):
+        self.normals = np.ones((len(self.vertex_list),6,2))*-1.0
+        for i in range(len(self.vertex_list)):
+            count = 0
+
+            total = len(self.friends[i])
+
+            if self.friends[i][-1] < 0:
+                total = 5
+
+            while count < total:
+                # pointm = self.cart2sph(self.vertex_list[i])[1:]
+                point1 = self.cart2sph(self.vertex_list[int(self.friends[i][count])])[1:]
+                point2 = self.cart2sph(self.vertex_list[int(self.friends[i][(count+1) % total])])[1:]
+
+                vec = point2 - point1
+                self.normals[i][count][0] = vec[1]
+                self.normals[i][count][1] = -vec[0]
+                self.normals[i][count] /= np.sqrt(sum(self.normals[i][count]**2))
+
+                count+=1
+
+            print(self.friends[i], self.normals[i])
+
+    def arclength(self):
+
+
+    def cart2sph(self,coords):
+        x = coords[0]
+        y = coords[1]
+        z = coords[2]
+        r = np.sqrt(x**2 + y**2 + z**2)
+        lat = np.pi*0.5 - np.arccos(z/r)
+        lon = np.arctan2(y,x)
+
+
+        if np.rad2deg(lon)+180.0 > 359.9:
+            return np.array([r, np.rad2deg(lat), 0.0])
+        return np.array([r, np.rad2deg(lat), np.rad2deg(lon)+180.0])
+
 
 if __name__== '__main__':
 
@@ -134,20 +226,6 @@ if __name__== '__main__':
     icosahedron = Shape2.Shape()
 
     # Define the 12 vertices of an icosahedra
-    # v1 = np.array([0, 1.0, f])
-    # v2 = np.array([0, -1.0, f])
-    # v3 = np.array([0, 1.0, -f])
-    # v4 = np.array([0, -1.0, -f])
-    #
-    # v5 = np.array([1.0, f, 0])
-    # v6 = np.array([-1.0, f, 0])
-    # v7 = np.array([1.0, -f, 0])
-    # v8 = np.array([-1.0, -f, 0])
-    #
-    # v9 = np.array([f, 0, 1.0])
-    # v10 = np.array([f, 0, -1.0])
-    # v11 = np.array([-f, 0, 1.0])
-    # v12 = np.array([-f, 0, -1.0])
 
     r = 1.0
 
@@ -202,7 +280,7 @@ if __name__== '__main__':
     # icosahedron.min_mag = 2.0
     icosahedron.find_friends()
 
-    L = 4
+    L = 0
 
     mins = [2.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
     for i in range(L+1):
@@ -217,8 +295,9 @@ if __name__== '__main__':
             icosahedron.twist_grid()
         icosahedron.find_friends()
 
+    icosahedron.order_friends()
 
-    # icosahedron.find_friends()
+    icosahedron.find_normals()
 
     print("Calculations complete. Plotting...")
 
@@ -234,7 +313,7 @@ if __name__== '__main__':
 
 
     # m = Basemap(projection='hammer',lon_0=180)
-    m = Basemap(projection='ortho',lon_0=180,lat_0=0)
+    m = Basemap(projection='ortho',lon_0=0,lat_0=0)
     x, y = m(lons,lats)
     # m.scatter(x,y,marker='o',s=8,color='k')
     # plt.show()
@@ -254,18 +333,17 @@ if __name__== '__main__':
                 # m.plot([x20,x2],[y20,y2],color='k')
                 # if (lons[num] != 0 and lons[i] < 350) or (lons[i] != 0 and lons[num] < 350):
                 m.drawgreatcircle(lons[num],lats[num],lons[i],lats[i],c='k')
-
     plt.show()
 
-    f = open('grid_l4_test.txt','w')
-    for i in range(len(icosahedron.vertex_list)):
-        f.write('{:<5d} {: >10.6f}   {: >10.6f}   '.format(i, lats[i], lons[i])) # python will convert \n to os.linesep
-        string = '{'
-        for j in range(len(icosahedron.friends[0])):
-            string += '{:3d}'.format(int(icosahedron.friends[i][j]))
-            if j < len(icosahedron.friends[0]) - 1:
-                string += ', '
-            else:
-                string += '}\n'
-        f.write(string)
-    f.close() # you can omit in most cases as the destructor will call it
+    # f = open('grid_l'+str(L)+'_test.txt','w')
+    # for i in range(len(icosahedron.vertex_list)):
+    #     f.write('{:<5d} {: >10.6f}   {: >10.6f}   '.format(i, lats[i], lons[i])) # python will convert \n to os.linesep
+    #     string = '{'
+    #     for j in range(len(icosahedron.friends[0])):
+    #         string += '{:3d}'.format(int(icosahedron.friends[i][j]))
+    #         if j < len(icosahedron.friends[0]) - 1:
+    #             string += ', '
+    #         else:
+    #             string += '}\n'
+    #     f.write(string)
+    # f.close() # you can omit in most cases as the destructor will call it
