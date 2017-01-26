@@ -157,14 +157,14 @@ class Shape:
                 point2 = self.cart2sph(self.vertex_list[int(self.friends[i][j])])[1:]
                 if transform_ind[j] != 0.0:
                     point2[1] = transform_ind[j]
-                #if abs(point2[0]) > 89.0:
-                #    point2[1] = 0.0
+                
+                
                 vector = point2 - point1
                 dot = np.dot(north_vector,vector)
                 det = north_vector[0]*vector[1] - north_vector[1]*vector[0]
                 angle = np.arctan2(det,dot)
-                if i==10:
-                    print(point1, point2, vector, dot, np.rad2deg(angle)+180.0)
+                
+                
                 angles.append(np.rad2deg(angle)+180.0)
 
 
@@ -185,45 +185,25 @@ class Shape:
         self.centers = np.zeros((len(self.vertex_list),6,2))
         for i in range(len(self.vertex_list)):
             p1 = self.vertex_list[i]
-            p1s = self.cart2sph(p1)[1:]
-             
+                         
             total = 6
             if self.friends[i][-1] < 0:
                 total = 5
 
             centers_ = np.ones((6,2))*-1
             for j in range(total):
-                p2 = self.vertex_list[self.friends[i][j]]
-                p2s = self.cart2sph(p2)[1:]
+                p2 = self.vertex_list[int(self.friends[i][j])]
+                p3 = self.vertex_list[int(self.friends[i][(j+1)%total])]
+                
+                center = (p1 + p2 + p3)/3.0    
 
-                p3 = self.vertex_list[self.friends[i][(j+1)%total]]
-                p3s = self.cart2sph(p3)[1:]
-                if i==10: 
-                    print(p1s,p2s,p3s) 
-                if p1s[1] >= 0.0 and p1s[1] < 180.0 and p2s[1] > 200.0:
-                    p2s[1] = -(360.0 - p2s[1])
-                elif p1s[1] > 180.0 and p2s[1] < 50.0:
-                    p2s[1] += 360.0
+                mag = np.sqrt(sum(center**2))
 
-                if p1s[1] >= 0.0 and p1s[1] < 180.0 and p3s[1] >200.0:
-                    p3s[1] = -(360.0 - p3s[1])
-                elif p1s[1] > 180.0 and p3s[1] < 50.0:
-                    p3s[1] += 360.0
+                center = center/mag 
 
-                if (abs(p2s[0]) > 89.0 and p2s[1] > 170.0):
-                    p2s[1] = 0.0         
-                if (abs(p3s[0]) > 89.0 and p3s[1] > 170.0):
-                    p3s[1] = 0.0         
- 
-                center = (p1s + p2s + p3s)/3.0
-               
-                if center[1] < 0.0:
-                    center[1] += 360.0
-                elif center[1] >= 360.0:
-                    center[1] -= 360.0
-                if i==10:
-                    print(p1s,p2s,p3s,center)
-                centers_[j] = center#self.sph2cart(1.0,np.pi*0.5 - center[0],center[1])
+                center = self.cart2sph(center)[1:]
+
+                centers_[j] = center
             
                 
             self.centers[i] = centers_
@@ -241,7 +221,6 @@ class Shape:
                 total = 5
 
             while count < total:
-                # pointm = self.cart2sph(self.vertex_list[i])[1:]
                 point1 = self.cart2sph(self.vertex_list[int(self.friends[i][count])])[1:]
                 point2 = self.cart2sph(self.vertex_list[int(self.friends[i][(count+1) % total])])[1:]
 
@@ -357,19 +336,19 @@ if __name__== '__main__':
 
     icosahedron.scale_vertex(scale_factor)
 
-    # axis = np.array([1.0, 0.0, 0.0])
+
     # theta = np.deg2rad(57.0)
     #
     # for i in range(len(icosahedron.vertex_list)):
-    #     icosahedron.vertex_list[i] = np.dot(rotation_matrix(axis,theta), icosahedron.vertex_list[i])
-    #     print(np.dot(rotation_matrix(axis,theta), icosahedron.vertex_list[i]))
 
 
 
-    # icosahedron.min_mag = 2.0
+
+
+
     icosahedron.find_friends()
 
-    L = 0 
+    L = 2 
 
     mins = [2.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
     for i in range(L+1):
@@ -381,15 +360,21 @@ if __name__== '__main__':
         # icosahedron.min_mag = mins[i+1]
         print("\tIdentifying neighbourghs...\n\n")
         if (i == L):
+            print("\tRotating Southern Hemisphere by pi/2...")
             icosahedron.twist_grid()
         icosahedron.find_friends()
 
+    print("Ordering neighbouring point in clockwise fashion...")
     icosahedron.order_friends()
+
+    print("Finding triangular centroids...")
     icosahedron.find_centers()
+
+
     #icosahedron.find_normals()
 
     print("Calculations complete. Plotting...")
-    m = Basemap(projection='ortho',lon_0=0,lat_0=90)
+    m = Basemap(projection='ortho',lon_0=35,lat_0=40)
     lats = []
     lons = []
     for i in range(len(icosahedron.centers)):
@@ -422,39 +407,29 @@ if __name__== '__main__':
     lats = np.array(lats)
     lons = np.array(lons)
     for num in range(len(icosahedron.vertex_list)):
-       #x, y = m(lons,lats)
-       #x20, y20 = m(lons[num],lats[num])
-       #m.scatter(x20,y20,marker='o',s=6,color='r')
-
-       for i in icosahedron.friends[num]:
-            #for k in range(3):
-            #   mag += (b[num][k] - b[int(i)][k])**2
-            #mag = np.sqrt(mag)
-            if i >= 0:# and (x20 != 0 or x20 <350)  and (x2 != 0 or x20 <350):
-               #x2, y2 = m(lons[i],lats[i])
-               #m.plot([x20,x2],[y20,y2],color='k')
-               #if (lons[num] != 0 and lons[i] < 350) or (lons[i] != 0 and lons[num] < 350):
+       for i in icosahedron.friends[num]:            
+            if i >= 0:
                m.drawgreatcircle(lons[num],lats[num],lons[int(i)],lats[int(i)],c='k',lw=0.5)
-               #if num == 10:
-               #    plt.show()
+              
+               
        total = 6
        if icosahedron.friends[num][-1] < 0:
            total = 5
 
        for i in range(total):
-           sph = icosahedron.centers[num][i]
-           lat = sph[0]
-           lon = sph[1]
+           sph1 = icosahedron.centers[num][i]
+           lat1 = sph1[0]
+           lon1 = sph1[1]
 
-           x, y = m(lon,lat)
-           m.scatter(x, y, marker='o',s=8,color='k')
-           print(lat,lon)
-           #if num == 7:
-           #    plt.show()
-       #print('\n')
-       plt.show()
+           sph2 = icosahedron.centers[num][(i+1)%total]
+           lat2 = sph2[0]
+           lon2 = sph2[1]
 
+           m.drawgreatcircle(lon1, lat1, lon2, lat2, c='b', lw=0.4)
 
+           #x, y = m(lon,lat)
+           #m.scatter(x, y, marker='o',s=2,color='k')
+   
     plt.show()
 
     f = open('grid_l'+str(L)+'_testing.txt','w')
