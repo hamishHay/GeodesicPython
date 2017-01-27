@@ -32,14 +32,7 @@ class Shape:
                     vector = np.array(vector)
 
                     vertii.append(vector)
-                    #print("APPENDING VECTOR:", vector)
-
-        #bset = set(tuple(x) for x in self.vertex_list)
-        #self.vertex_list = list(bset)
-
-        #for i in range(len(self.vertex_list)):
-        #    self.vertex_list[i] = np.array(self.vertex_list[i])
-
+                    
         self.vertex_list = np.array(vertii)
 
         ncols = self.vertex_list.shape[1]
@@ -52,9 +45,9 @@ class Shape:
 
         self.vertex_list = uniq.view(self.vertex_list.dtype).reshape(-1,ncols)
 
-        #self.vertex_list = np.vstack({tuple(row) for row in self.vertex_list})
 
-        #print("NEW VERTEX LIST:", self.vertex_list)
+
+
 
     def get_min_mag(self):
         mags = []
@@ -75,8 +68,8 @@ class Shape:
         self.friends = np.ones((len(self.vertex_list), 6))*-1
         for i in range(len(self.vertex_list)):
             p1 = self.vertex_list[i]
-            if i%100 == 0:
-                print(float(i)/float(len(self.vertex_list))*100)
+            #if i%100 == 0:
+            #    print(float(i)/float(len(self.vertex_list))*100)
             for j in range(len(self.vertex_list)):
                 p2 = self.vertex_list[j]
                 mag = np.sqrt(sum((p1-p2)**2.0))
@@ -207,8 +200,77 @@ class Shape:
             
                 
             self.centers[i] = centers_
-             
-                 
+
+    def haversine(self,lat1,lat2,lon1,lon2):
+
+        A = np.sin(0.5*(lat2-lat1))**2 
+        B = np.cos(lat1)*np.cos(lat2)*np.sin(0.5*(lon2-lon1))**2
+            
+        dangle = 2.0*np.arcsin(np.sqrt(A+B)) 
+        return dangle 
+
+               
+    def find_arc_lengths(self):
+        def haversine(lat1,lat2,lon1,lon2):
+
+            A = np.sin(0.5*(lat2-lat1))**2 
+            B = np.cos(lat1)*np.cos(lat2)*np.sin(0.5*(lon2-lon1))**2
+            
+            dangle = 2.0*np.arcsin(np.sqrt(A+B)) 
+            return dangle 
+
+        self.arc_lengths = np.ones((len(self.vertex_list), 6))*-1
+
+        for i in range(len(self.vertex_list)):
+            total = 6
+            if self.friends[i][-1] < 0:
+                total = 5
+
+
+            for j in range(total):
+                p1 = np.deg2rad(self.centers[i][j])
+                p2 = np.deg2rad(self.centers[i][(j+1)%total])
+
+                lat1 = p1[0]
+                lat2 = p2[0]
+
+                lon1 = p1[1]
+                lon2 = p2[1]
+
+
+
+                dangle = self.haversine(lat1,lat2,lon1,lon2)
+
+                self.arc_lengths[i][j] = dangle
+
+            #print(self.arc_lengths[i])
+    
+    def find_arc_midpoints(self):
+        self.arc_mids = np.ones((len(self.vertex_list),6,2))*-1
+        for i in range(len(self.vertex_list)):
+            total = 6
+            if self.friends[i][-1] < 0:
+                total = 5
+
+
+            for j in range(total):
+                p1 = np.deg2rad(self.centers[i][j])
+                p2 = np.deg2rad(self.centers[i][(j+1)%total])
+
+                lat1 = p1[0]
+                lat2 = p2[0]
+
+                lon1 = p1[1]
+                lon2 = p2[1]
+               
+                Bx = np.cos(lat2)*np.cos(lon2-lon1)
+                By = np.cos(lat2)*np.sin(lon2-lon1)
+                latm = np.arctan2(np.sin(lat1) + np.sin(lat2), np.sqrt((np.cos(lat1) + Bx)**2 + By**2))
+
+                lonm = lon1 + np.arctan2(By, np.cos(lat1)+Bx)
+
+                self.arc_mids[i][j] = np.rad2deg(np.array([latm,lonm]))
+           
 
     def find_normals(self):
         self.normals = np.ones((len(self.vertex_list),6,2))*-1.0
@@ -220,21 +282,54 @@ class Shape:
             if self.friends[i][-1] < 0:
                 total = 5
 
-            while count < total:
-                point1 = self.cart2sph(self.vertex_list[int(self.friends[i][count])])[1:]
-                point2 = self.cart2sph(self.vertex_list[int(self.friends[i][(count+1) % total])])[1:]
+            for j in range(total):
+                p1 = np.deg2rad(self.centers[i][j])             
+                p2 = np.deg2rad(self.centers[i][(j+1)%total])
 
-                vec = point2 - point1
-                self.normals[i][count][0] = vec[1]
-                self.normals[i][count][1] = -vec[0]
-                self.normals[i][count] /= np.sqrt(sum(self.normals[i][count]**2))
+                lat1 = p1[0]
+                lat2 = p2[0]
+                lon1 = p1[1]
+                lon2 = p2[1]
 
-                count+=1
+                dangle = self.arc_lengths[i][j]
 
-            print(self.friends[i], self.normals[i])
+                #print(dangle)
+                #if i==1 and j==0:
+                #    print(np.rad2deg(lat1),np.rad2deg(lon1),np.rad2deg(lat2),np.rad2deg(lon2))
+                f = np.array([0.5-1e-4,0.5+1e-4])
 
-    #def arclength(self):
-    
+                latf = np.zeros(2)
+                lonf = np.zeros(2)
+
+                for k in range(2):
+                    A = np.sin((1.0-f[k])*dangle)/np.sin(dangle)
+                    B = np.sin(f[k]*dangle)/np.sin(dangle)
+
+                    x = A * np.cos(lat1) * np.cos(lon1) + B * np.cos(lat2)*np.cos(lon2)
+                    y = A * np.cos(lat1) * np.sin(lon1) + B * np.cos(lat2)*np.sin(lon2)
+                    z = A*np.sin(lat1) + B*np.sin(lat2)
+                    latf[k] = np.arctan2(z,np.sqrt(x**2.0 + y**2.0))
+                    lonf[k] = np.arctan2(y,x)
+
+                mp1 = np.rad2deg(np.array([latf[0],lonf[0]]))
+                mp2 = np.rad2deg(np.array([latf[1],lonf[1]]))
+
+                dmp = mp2-mp1
+
+                dlat = dmp[0]
+                dlon = dmp[1]
+
+                #if i==1 and j==0:
+                #    print(mp1,mp2,dlat,dlon)
+
+                self.normals[i][j] = np.array([dlon,-dlat])/np.sqrt(sum(dmp**2))
+
+            #print(self.normals[i])
+
+                 
+                
+
+     
     def sph2cart(self,r,theta,phi):
         theta = np.deg2rad(theta)
         phi = np.deg2rad(phi)
@@ -286,7 +381,7 @@ if __name__== '__main__':
 
 
 
-
+    
     import Shape2
 
     f = (1.0 + np.sqrt(5.0))/2.0
@@ -334,21 +429,11 @@ if __name__== '__main__':
 
     scale_factor = 1.0 / np.sin(2*np.pi/5) / 2.0
 
-    icosahedron.scale_vertex(scale_factor)
-
-
-    # theta = np.deg2rad(57.0)
-    #
-    # for i in range(len(icosahedron.vertex_list)):
-
-
-
-
-
-
+    icosahedron.scale_vertex(scale_factor)   
+  
     icosahedron.find_friends()
 
-    L = 2 
+    L = int(sys.argv[1]) 
 
     mins = [2.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
     for i in range(L+1):
@@ -371,10 +456,18 @@ if __name__== '__main__':
     icosahedron.find_centers()
 
 
-    #icosahedron.find_normals()
+    print("Finding arc lengths between centroids...")
+    icosahedron.find_arc_lengths()
+    
+    print("Finding arc length centers...")
+    icosahedron.find_arc_midpoints()
+
+    print("Finding normal vectors to cells...")
+    icosahedron.find_normals()
+
 
     print("Calculations complete. Plotting...")
-    m = Basemap(projection='ortho',lon_0=35,lat_0=40)
+    m = Basemap(projection='ortho',lon_0=0,lat_0=0)
     lats = []
     lons = []
     for i in range(len(icosahedron.centers)):
@@ -429,8 +522,17 @@ if __name__== '__main__':
 
            #x, y = m(lon,lat)
            #m.scatter(x, y, marker='o',s=2,color='k')
-   
-    plt.show()
+       for i in range(total):
+           lat1 = icosahedron.arc_mids[num][i][0] 
+           lon1 = icosahedron.arc_mids[num][i][1]
+
+           
+           x, y = m(lon1,lat1)
+           m.scatter(x, y, marker='o',s=2,color='k')
+                      
+       print(icosahedron.normals[num])
+
+       plt.show()   
 
     f = open('grid_l'+str(L)+'_testing.txt','w')
     for i in range(len(icosahedron.vertex_list)):
