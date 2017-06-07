@@ -10,6 +10,8 @@ load_file = 'grid_l1_testing.txt'
 f = open(load_file,'r')
 lines = f.readlines()
 
+print(lines)
+
 lats = []
 lons = []
 friends = []

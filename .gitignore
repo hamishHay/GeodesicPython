@@ -56,3 +56,5 @@ __pycache__/Shape.cpython-35.pyc
 *.iml
 *.pdf
 *.pyc
+Shape2.py
+*.txt
