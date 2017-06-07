@@ -5,7 +5,7 @@ from mpl_toolkits.basemap import Basemap
 
 #grid = np.loadtxt('grid_l4.txt').T
 
-load_file = 'grid_l4_test.txt'
+load_file = 'grid_l1_testing.txt'
 
 f = open(load_file,'r')
 lines = f.readlines()
@@ -38,6 +38,7 @@ friends = np.array(friends)
 data = np.cos(3*np.deg2rad(lats))*np.cos(np.deg2rad(lons))
 
 plt.scatter(lons,lats,c='b',s=0.5)
+plt.show()
 ax = plt.gca()
 ax.set_aspect('equal')
 
@@ -50,7 +51,7 @@ x, y = m(lons,lats)
 for num in range(len(lats)):
 # x, y = m(lons,lats)
     x20, y20 = m(lons[num],lats[num])
-    # m.scatter(x20,y20,marker='o',s=6,color='r')
+    m.scatter(x20,y20,marker='o',s=6,color='r')
 
     for i in friends[num]:
         # for k in range(3):
@@ -60,7 +61,7 @@ for num in range(len(lats)):
             x2, y2 = m(lons[i],lats[i])
             # m.plot([x20,x2],[y20,y2],color='k')
             # if (lons[num] != 0 and lons[i] < 350) or (lons[i] != 0 and lons[num] < 350):
-            m.drawgreatcircle(lons[num],lats[num],lons[i],lats[i],c='k')
+            # m.drawgreatcircle(lons[num],lats[num],lons[i],lats[i],c='k')
 plt.show()
 # m.pcolor(x,y,data,tri=True,cmap=plt.cm.hot)
 # plt.savefig("COOOOL.png",bbox_inches='tight')
