@@ -29,7 +29,7 @@ def y_coord(lat0, lon0, lat1, lon1):
 
     return y
 
-load_file = 'grid_l1_testing.txt'
+load_file = 'grid_l5.txt'
 
 f = open(load_file,'r')
 lines = f.readlines()
@@ -39,7 +39,7 @@ lines = f.readlines()
 lats = []
 lons = []
 friends = []
-for line in lines:
+for line in lines[1:]:
     all = []
     line = line.split()
 
@@ -55,41 +55,67 @@ for line in lines:
         line[start+i] = line[start+i].strip('{')
         line[start+i] = line[start+i].strip('}')
         line[start+i] = line[start+i].strip(',')
+        line[start+i] = line[start+i].strip('},')
 
+        print(line)
         all.append(int(line[start+i]))
     friends.append(all)
+    # break
 f.close()
 
-lats = deg2rad(np.array(lats))
-lons = deg2rad(np.array(lons))
+
+# lats = deg2rad(np.array(lats))
+# lons = deg2rad(np.array(lons))
+lats = np.array(lats)
+lons = np.array(lons)
 friends = np.array(friends)
 
-for t in range(len(friends)):
-    lat1 = lats[t]
-    lon1 = lons[t]
+print(lats[0])
+print(lons[0])
+print(friends[0])
+print(lats[friends[0]])
+print(lons[friends[0]])
 
-    xs = [x_coord(lat1,lon1,lat1,lon1)]
-    ys = [y_coord(lat1,lon1,lat1,lon1)]
+m = Basemap(projection='ortho',lon_0=0,lat_0=0)
 
-    if friends[t][-1] != -1:
-        length = 6
-    else:
-        length = 5
+x, y = m(lons[0],lats[0])
+m.scatter(x,y,marker='o',s=8,color='k')
+x, y = m(lons[friends[0]],lats[friends[0]])
+m.scatter(x,y,marker='o',s=8,color='k')
+plt.show()
 
-    for i in range(length):
-        lat2 = lats[friends[t][i]]
-        lon2 = lons[friends[t][i]]
-
-        x = x_coord(lat1,lon1,lat2,lon2)
-        y = y_coord(lat1,lon1,lat2,lon2)
-
-        xs.append(x)
-        ys.append(y)
-
-    print(xs,ys)
-    plt.scatter(xs,ys)
-        # plt.show()
-
-    plt.grid()
-    plt.show()
-
+# plt.scatter(lons[0],lats[0])
+# plt.scatter(lons[friends[0]],lats[friends[0]])
+# plt.show()
+#
+# for t in range(len(friends)):
+#     lat1 = lats[t]
+#     lon1 = lons[t]
+#
+#     xs = [x_coord(lat1,lon1,lat1,lon1)]
+#     ys = [y_coord(lat1,lon1,lat1,lon1)]
+#
+#     if friends[t][-1] != -1:
+#         length = 6
+#     else:
+#         length = 5
+#
+#     for i in range(length):
+#         lat2 = lats[friends[t][i]]
+#         lon2 = lons[friends[t][i]]
+#
+#         # latx.append(lat2)
+#         # lonx.append(lon1)
+#
+#         x = x_coord(lat1,lon1,lat2,lon2)
+#         y = y_coord(lat1,lon1,lat2,lon2)
+#
+#         xs.append(x)
+#         ys.append(y)
+#
+#     print(xs,ys)
+#     plt.scatter(xs,ys)
+#         # plt.show()
+#
+#     plt.grid()
+#     plt.show()

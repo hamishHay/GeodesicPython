@@ -436,7 +436,7 @@ if __name__== '__main__':
     L = int(sys.argv[1])
 
     mins = [2.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
-    for i in range(L+1):
+    for i in range(L-1):
         print("Calculating L" + str(i+1))
         icosahedron.bisect_edges()
         print("\tBisection complete...")
@@ -444,7 +444,7 @@ if __name__== '__main__':
         print("\tProjecting onto sphere...")
         # icosahedron.min_mag = mins[i+1]
         print("\tIdentifying neighbourghs...\n\n")
-        if (i == L):
+        if (i == L-2):
             print("\tRotating Southern Hemisphere by pi/2...")
             icosahedron.twist_grid()
         icosahedron.find_friends()
@@ -499,50 +499,75 @@ if __name__== '__main__':
 
     lats = np.array(lats)
     lons = np.array(lons)
-    for num in range(len(icosahedron.vertex_list)):
-       for i in icosahedron.friends[num]:
-            if i >= 0:
-               m.drawgreatcircle(lons[num],lats[num],lons[int(i)],lats[int(i)],c='k',lw=0.5)
-
-
-       total = 6
-       if icosahedron.friends[num][-1] < 0:
-           total = 5
-
-       for i in range(total):
-           sph1 = icosahedron.centers[num][i]
-           lat1 = sph1[0]
-           lon1 = sph1[1]
-
-           sph2 = icosahedron.centers[num][(i+1)%total]
-           lat2 = sph2[0]
-           lon2 = sph2[1]
-
-           m.drawgreatcircle(lon1, lat1, lon2, lat2, c='b', lw=0.4)
-
-           #x, y = m(lon,lat)
-           #m.scatter(x, y, marker='o',s=2,color='k')
-       for i in range(total):
-           lat1 = icosahedron.arc_mids[num][i][0]
-           lon1 = icosahedron.arc_mids[num][i][1]
-
-
-           x, y = m(lon1,lat1)
-           m.scatter(x, y, marker='o',s=2,color='k')
+    # for num in range(len(icosahedron.vertex_list)):
+    #    for i in icosahedron.friends[num]:
+    #         if i >= 0:
+    #            m.drawgreatcircle(lons[num],lats[num],lons[int(i)],lats[int(i)],c='k',lw=0.5)
+    #
+    #
+    #    total = 6
+    #    if icosahedron.friends[num][-1] < 0:
+    #        total = 5
+    #
+    #    for i in range(total):
+    #        sph1 = icosahedron.centers[num][i]
+    #        lat1 = sph1[0]
+    #        lon1 = sph1[1]
+    #
+    #        sph2 = icosahedron.centers[num][(i+1)%total]
+    #        lat2 = sph2[0]
+    #        lon2 = sph2[1]
+    #
+    #        m.drawgreatcircle(lon1, lat1, lon2, lat2, c='b', lw=0.4)
+    #
+    #        #x, y = m(lon,lat)
+    #        #m.scatter(x, y, marker='o',s=2,color='k')
+    #    for i in range(total):
+    #        lat1 = icosahedron.arc_mids[num][i][0]
+    #        lon1 = icosahedron.arc_mids[num][i][1]
+    #
+    #
+    #        x, y = m(lon1,lat1)
+    #        m.scatter(x, y, marker='o',s=2,color='k')
 
     #    print(icosahedron.normals[num])
 
-    plt.show()
+    # plt.show()
 
-    f = open('grid_l'+str(L)+'_testing.txt','w')
+    # f = open('grid_l'+str(L)+'_testing.txt','w')
+    # for i in range(len(icosahedron.vertex_list)):
+    #     f.write('{:<5d} {: >10.6f}   {: >10.6f}   '.format(i, lats[i], lons[i])) # python will convert \n to os.linesep
+    #     string = '{'
+    #     for j in range(len(icosahedron.friends[0])):
+    #        string += '{:3d}'.format(int(icosahedron.friends[i][j]))
+    #        if j < len(icosahedron.friends[0]) - 1:
+    #            string += ', '
+    #        else:
+    #            string += '}\n'
+    #     f.write(string)
+    # f.close() # you can omit in most cases as the destructor will call it
+
+
+    f = open('grid_l'+str(L)+'.txt','w')
+    # f.write("ID     NODE_LAT      NODE_LON | FRIENDS LIST | CENTROID COORD LIST\n")
+    f.write('{:<5s} {: <10s}   {: <10s}   {: <36s}  {:20s}'.format("ID", "NODE_LAT", "NODE_LON", "FRIENDS LIST", "CENTROID COORD LIST\n"))
     for i in range(len(icosahedron.vertex_list)):
         f.write('{:<5d} {: >10.6f}   {: >10.6f}   '.format(i, lats[i], lons[i])) # python will convert \n to os.linesep
         string = '{'
-        # for j in range(len(icosahedron.friends[0])):
-        #    string += '{:3d}'.format(int(icosahedron.friends[i][j]))
-        #    if j < len(icosahedron.friends[0]) - 1:
-        #        string += ', '
-        #    else:
-        #        string += '}\n'
-        # f.write(string)
+        for j in range(len(icosahedron.friends[0])):
+           string += '{:4d}'.format(int(icosahedron.friends[i][j]))
+           if j < len(icosahedron.friends[0]) - 1:
+               string += ', '
+           else:
+               string += '}, '
+
+        string += '{'
+        for j in range(len(icosahedron.centers[0])):
+            string += '({:10.6f}, {:10.6f})'.format(icosahedron.centers[i][j][0], icosahedron.centers[i][j][1])
+            if j < len(icosahedron.centers[0]) - 1:
+                string += ', '
+            else:
+                string += '} \n'
+        # print(string)
+        f.write(string)
     f.close() # you can omit in most cases as the destructor will call it

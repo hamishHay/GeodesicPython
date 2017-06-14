@@ -5,12 +5,12 @@ from mpl_toolkits.basemap import Basemap
 
 #grid = np.loadtxt('grid_l4.txt').T
 
-load_file = 'grid_l1_testing.txt'
+load_file = "grid_l" + str(int(sys.argv[1])) + "_testing.txt"
 
 f = open(load_file,'r')
 lines = f.readlines()
 
-print(lines)
+# [print(i) for i in lines]
 
 lats = []
 lons = []
@@ -18,19 +18,22 @@ friends = []
 for line in lines:
     all = []
     line = line.split()
+
+
     lats.append(float(line[1]))
     lons.append(float(line[2]))
 
+    if line[3] == "{":
+        line.remove("{")
+
     start = 3
     for i in range(6):
-        if line[start] == '{':
-            start = 4
-        print(line)
         line[start+i] = line[start+i].strip('{')
         line[start+i] = line[start+i].strip('}')
         line[start+i] = line[start+i].strip(',')
-        print(line)
+
         all.append(int(line[start+i]))
+    print(line)
     friends.append(all)
 f.close()
 
