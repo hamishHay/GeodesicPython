@@ -114,65 +114,72 @@ class Shape:
             # print(np.dot(rotation_matrix(axis,theta), icosahedron.vertex_list[i]))
 
     def order_friends(self):
+        # for i in range(len(self.vertex_list)):
+        #     #Convert central point to spherical coords
+        #     point1 = self.cart2sph(self.vertex_list[i])[1:]
+        #
+        #     #Identify if central point is hexagon or pentagon center
+        #     pentagon = 0
+        #     if (self.friends[i][-1] < 0.0):
+        #         pentagon = 1
+        #
+        #     #Populate list of all neighbour longitude values
+        #     lons = []
+        #     for j in range(len(self.friends[i])-pentagon):
+        #         lons.append(self.cart2sph(self.vertex_list[int(self.friends[i][j])])[2])
+        #
+        #     #Populate list of transfrom array. If no transform is needed, the array is 0
+        #     #by default.
+        #     transform_ind = np.zeros(6)
+        #     if point1[1] < 30.0 and max(lons) > 180:
+        #         for j in range(len(self.friends[i])-pentagon):
+        #             if (lons[j] > 180.0):
+        #                 transform_ind[j] = -(360.0-lons[j])
+        #     elif point1[1] > 180.0 and min(lons) < 30.0:
+        #         for j in range(len(self.friends[i])-pentagon):
+        #             if (lons[j] < 30.0):
+        #                 transform_ind[j] = 360.0 + lons[j]
+        #
+        #
+        #     mag_north = 1.0
+        #     north_vector = np.array([-1.0, 0.0])
+        #
+        #     angles = []
+        #
+        #     for j in range(len(self.friends[i])-pentagon):
+        #         point2 = self.cart2sph(self.vertex_list[int(self.friends[i][j])])[1:]
+        #         if transform_ind[j] != 0.0:
+        #             point2[1] = transform_ind[j]
+        #
+        #
+        #         vector = point2 - point1
+        #         dot = np.dot(north_vector,vector)
+        #         det = north_vector[0]*vector[1] - north_vector[1]*vector[0]
+        #         angle = np.arctan2(det,dot)
+        #
+        #
+        #         angles.append(np.rad2deg(angle)+180.0)
+        #
+        #
+        #
+        #     count = 0
+        #     temp = []
+        #     while count < len(angles):
+        #         ind = np.argmin(angles)
+        #         temp.append(int(self.friends[i][ind]))
+        #         angles[ind] = 1000
+        #         count+=1
+        #
+        #     if pentagon:
+        #         temp.append(-1)
+        #     self.friends[i] = temp
+
         for i in range(len(self.vertex_list)):
             #Convert central point to spherical coords
             point1 = self.cart2sph(self.vertex_list[i])[1:]
 
-            #Identify if central point is hexagon or pentagon center
-            pentagon = 0
-            if (self.friends[i][-1] < 0.0):
-                pentagon = 1
+            print(point1)
 
-            #Populate list of all neighbour longitude values
-            lons = []
-            for j in range(len(self.friends[i])-pentagon):
-                lons.append(self.cart2sph(self.vertex_list[int(self.friends[i][j])])[2])
-
-            #Populate list of transfrom array. If no transform is needed, the array is 0
-            #by default.
-            transform_ind = np.zeros(6)
-            if point1[1] < 30.0 and max(lons) > 180:
-                for j in range(len(self.friends[i])-pentagon):
-                    if (lons[j] > 180.0):
-                        transform_ind[j] = -(360.0-lons[j])
-            elif point1[1] > 180.0 and min(lons) < 30.0:
-                for j in range(len(self.friends[i])-pentagon):
-                    if (lons[j] < 30.0):
-                        transform_ind[j] = 360.0 + lons[j]
-
-
-            mag_north = 1.0
-            north_vector = np.array([-1.0, 0.0])
-
-            angles = []
-
-            for j in range(len(self.friends[i])-pentagon):
-                point2 = self.cart2sph(self.vertex_list[int(self.friends[i][j])])[1:]
-                if transform_ind[j] != 0.0:
-                    point2[1] = transform_ind[j]
-
-
-                vector = point2 - point1
-                dot = np.dot(north_vector,vector)
-                det = north_vector[0]*vector[1] - north_vector[1]*vector[0]
-                angle = np.arctan2(det,dot)
-
-
-                angles.append(np.rad2deg(angle)+180.0)
-
-
-
-            count = 0
-            temp = []
-            while count < len(angles):
-                ind = np.argmin(angles)
-                temp.append(int(self.friends[i][ind]))
-                angles[ind] = 1000
-                count+=1
-
-            if pentagon:
-                temp.append(-1)
-            self.friends[i] = temp
 
     def find_centers(self):
         self.centers = np.zeros((len(self.vertex_list),6,2))
