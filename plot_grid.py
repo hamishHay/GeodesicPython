@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.basemap import Basemap
+import sys
 
 #grid = np.loadtxt('grid_l4.txt').T
 
-load_file = "grid_l" + str(int(sys.argv[1])) + "_testing.txt"
+load_file = "grid_l" + str(int(sys.argv[1])) + ".txt"
 
 f = open(load_file,'r')
 lines = f.readlines()
@@ -15,7 +16,7 @@ lines = f.readlines()
 lats = []
 lons = []
 friends = []
-for line in lines:
+for line in lines[1:]:
     all = []
     line = line.split()
 
@@ -31,10 +32,12 @@ for line in lines:
         line[start+i] = line[start+i].strip('{')
         line[start+i] = line[start+i].strip('}')
         line[start+i] = line[start+i].strip(',')
+        line[start+i] = line[start+i].strip('},')
 
+        print(line)
         all.append(int(line[start+i]))
-    print(line)
     friends.append(all)
+    # break
 f.close()
 
 lats = np.array(lats)
@@ -49,7 +52,7 @@ ax.set_aspect('equal')
 
 # # m = Basemap(projection='ortho',lon_0=-105,lat_0=40)
 # m = Basemap(projection='hammer',lon_0=180)
-m = Basemap(projection='ortho',lon_0=-105,lat_0=40)
+m = Basemap(projection='ortho',lon_0=0,lat_0=90)
 x, y = m(lons,lats)
 # m.scatter(x,y,marker='o',s=2,color='k')
 
@@ -67,7 +70,7 @@ for num in range(len(lats)):
             # m.plot([x20,x2],[y20,y2],color='k')
             # if (lons[num] != 0 and lons[i] < 350) or (lons[i] != 0 and lons[num] < 350):
             # m.drawgreatcircle(lons[num],lats[num],lons[i],lats[i],c='k')
-plt.show()
+    # plt.show()
 # m.pcolor(x,y,data,tri=True,cmap=plt.cm.hot)
 # plt.savefig("COOOOL.png",bbox_inches='tight')
 plt.show()
