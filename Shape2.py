@@ -1,5 +1,6 @@
 
 import numpy as np
+from numpy import sin, cos, radians, arctan2, sqrt,arccos, tan
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.basemap import Basemap
@@ -114,65 +115,83 @@ class Shape:
             # print(np.dot(rotation_matrix(axis,theta), icosahedron.vertex_list[i]))
 
     def order_friends(self):
+        def length(v):
+            return sqrt(v[0]**2+v[1]**2)
+        def dot_product(v,w):
+           return v[0]*w[0]+v[1]*w[1]
+        def determinant(v,w):
+           return v[0]*w[1]-v[1]*w[0]
+        def inner_angle(v,w):
+           cosx=dot_product(v,w)/(length(v)*length(w))
+           rad=arccos(cosx) # in radians
+           return rad*180/np.pi # returns degrees
+        def angle_clockwise(A, B):
+            inner=inner_angle(A,B)
+            det = determinant(A,B)
+            if det<0: #this is a property of the det. If the det < 0 then B is clockwise of A
+                return inner
+            else: # if the det > 0 then A is immediately clockwise of B
+                return 360-inner
+
         for i in range(len(self.vertex_list)):
             #Convert central point to spherical coords
             point1 = self.cart2sph(self.vertex_list[i])[1:]
 
-            #Identify if central point is hexagon or pentagon center
-            pentagon = 0
-            if (self.friends[i][-1] < 0.0):
-                pentagon = 1
+            lat1 = point1[0]
+            lon1 = point1[1]
 
-            #Populate list of all neighbour longitude values
-            lons = []
-            for j in range(len(self.friends[i])-pentagon):
-                lons.append(self.cart2sph(self.vertex_list[int(self.friends[i][j])])[2])
+            p0 = [0,1]
 
-            #Populate list of transfrom array. If no transform is needed, the array is 0
-            #by default.
-            transform_ind = np.zeros(6)
-            if point1[1] < 30.0 and max(lons) > 180:
-                for j in range(len(self.friends[i])-pentagon):
-                    if (lons[j] > 180.0):
-                        transform_ind[j] = -(360.0-lons[j])
-            elif point1[1] > 180.0 and min(lons) < 30.0:
-                for j in range(len(self.friends[i])-pentagon):
-                    if (lons[j] < 30.0):
-                        transform_ind[j] = 360.0 + lons[j]
-
-
-            mag_north = 1.0
-            north_vector = np.array([-1.0, 0.0])
-
+            friend_coords = []
             angles = []
 
-            for j in range(len(self.friends[i])-pentagon):
-                point2 = self.cart2sph(self.vertex_list[int(self.friends[i][j])])[1:]
-                if transform_ind[j] != 0.0:
-                    point2[1] = transform_ind[j]
+            new_friends = []
+
+            friend_num = 6
+            if np.any(self.friends[i]) == -1:
+                friend_num = 5
+
+            pentagon = False
+            for j in range(6):
+                f_index = self.friends[i][j]
+
+                if f_index != -1:
+                    coords = self.cart2sph(self.vertex_list[f_index])[1:]
+                    lat2 = coords[0]
+                    lon2 = coords[1]
+
+                    friend_coords.append(self.map_coords(lat1,lat2,lon1,lon2))
+
+                    p1 = friend_coords[-1]
+
+                    angles.append(angle_clockwise(p0, p1))
+                else:
+                    pentagon = True
 
 
-                vector = point2 - point1
-                dot = np.dot(north_vector,vector)
-                det = north_vector[0]*vector[1] - north_vector[1]*vector[0]
-                angle = np.arctan2(det,dot)
-
-
-                angles.append(np.rad2deg(angle)+180.0)
-
-
-
-            count = 0
-            temp = []
-            while count < len(angles):
-                ind = np.argmin(angles)
-                temp.append(int(self.friends[i][ind]))
-                angles[ind] = 1000
-                count+=1
+            friends = []
+            for j in np.argsort(angles):
+                friends.append(int(self.friends[i][j]))
 
             if pentagon:
-                temp.append(-1)
-            self.friends[i] = temp
+                friends.append(-1)
+
+            self.friends[i] = friends
+
+
+    def map_coords(self,lat1,lat2,lon1,lon2):
+        lat1 = radians(lat1)
+        lat2 = radians(lat2)
+        lon1 = radians(lon1)
+        lon2 = radians(lon2)
+
+        m = 2.0 * (1.0 + sin(lat2)*sin(lat1) + cos(lat1)*cos(lat2)*cos(lon2-lon1))
+
+        x = m * cos(lat2) * sin(lon2 - lon1)
+
+        y = m * (sin(lat2)*cos(lat1) - cos(lat2)*sin(lat1)*cos(lon2-lon1))
+
+        return [x, y]
 
     def find_centers(self):
         self.centers = np.zeros((len(self.vertex_list),6,2))
@@ -200,6 +219,153 @@ class Shape:
 
 
             self.centers[i] = centers_
+
+    def sph2map(self, lat1, lat2, lon1, lon2):
+        def get_m(lat1, lat2, lon1, lon2):
+            return 2.0 / (1.0 + sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2)*cos(lon2-lon1))
+
+        r = 252
+
+        m = get_m(lat1, lat2, lon1, lon2)
+
+        x = m*r*cos(lat2) * sin(lon2-lon1)
+
+        y = m * r * (sin(lat2)*cos(lat1) - cos(lat2)*sin(lat1)*cos(lon2-lon1))
+
+        return x, y
+
+    def map2sph(self, lat1, lon1, x, y):
+        r = 252
+
+        if abs(x) < 1e-10:
+            x = 0.0
+        if abs(y) < 1e-10:
+            y = 0.0
+
+        def get_m(x, y):
+            return (4*r**2 + x**2 + y**2)/(4*r**2)
+
+
+        m = get_m(x, y)
+
+        x = x/(m*r)
+        y = y/(m*r)
+
+        B = 0.5*m - 1.0 - y * tan(lat1) - x * (1.0/cos(lat1)) * tan(lon1)
+        B = B / ((cos(lat1)*tan(lon1)*sin(lon1)) + cos(lat1)*cos(lon1) + tan(lat1)*sin(lat1) * (sin(lon1)*tan(lon1) + cos(lon1)))
+
+        C = (1.0/cos(lat1)) * y + x * tan(lat1)*tan(lon1) + B * tan(lat1) * (sin(lon1)*tan(lon1) + cos(lon1))
+
+        new_lat = np.arcsin(C)
+        new_lon = np.arccos(B/cos(new_lat))
+
+        return(new_lat, new_lon)
+
+        # print("LONS: ", np.degrees(lon1), np.degrees(new_lon), np.degrees(lon1 - new_lon))
+        # print("LATS: ", np.degrees(lat1), np.degrees(new_lat), np.degrees(lat1 - new_lat))
+        # print(np.degrees(lon1 - new_lon), np.degrees(lat1 - new_lat))
+
+
+    def adjust_nodes_to_cv_centre(self):
+        for i in range(len(self.vertex_list)):
+            #Convert central point to spherical coords
+            point1 = np.radians(self.cart2sph(self.vertex_list[i])[1:])
+
+            lat1 = point1[0]
+            lon1 = point1[1]
+
+            [x1, y1, z1] = self.vertex_list[i]
+
+            total = 6
+            if self.friends[i][-1] < 0:
+                total = 5
+
+            cv_x = []
+            cv_y = []
+            cv_z = []
+            area_total = 0
+            for j in range(total):
+                friend_id = self.friends[i][j]
+
+                # point2 =  np.radians(self.cart2sph(self.vertex_list[friend_id])[1:])
+                # print(self.centers[i][j])
+
+                lat2 = np.radians(self.centers[i][j][0])
+                lon2 = np.radians(self.centers[i][j][1])
+
+                [x2, y2, z2] = self.sph2cart(1.0, np.degrees(lat2)-90.0, np.degrees(lon2))
+
+                lat3 = np.radians(self.centers[i][(j+1)%total][0])
+                lon3 = np.radians(self.centers[i][(j+1)%total][1])
+
+                [x3, y3, z3] = self.sph2cart(1.0, np.degrees(lat3)-90.0, np.degrees(lon3))
+
+                c = arccos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon2-lon1));
+                a = arccos(sin(lat2) * sin(lat3) + cos(lat2) * cos(lat3) * cos(lon3-lon2));
+                b = arccos(sin(lat3) * sin(lat1) + cos(lat3) * cos(lat1) * cos(lon1-lon3));
+
+                A = arccos((cos(a) - cos(b)*cos(c))/(sin(b)*sin(c)));
+                B = arccos((cos(b) - cos(a)*cos(c))/(sin(a)*sin(c)));
+                C = arccos((cos(c) - cos(b)*cos(a))/(sin(b)*sin(a)));
+
+                area = 1.0**2.0 * ((A + B + C) - np.pi);
+                area_total += area
+
+                x = (x1+x2+x3)/3.0
+                y = (y1+y2+y3)/3.0
+                z = (z1+z2+z3)/3.0
+                L = np.sqrt(x**2.0 + y**2.0 + z**2.0)
+
+                cv_x.append(area*x/L)
+                cv_y.append(area*y/L)
+                cv_z.append(area*z/L)
+
+            Cx = sum(cv_x)/area_total
+            Cy = sum(cv_y)/area_total
+            Cz = sum(cv_z)/area_total
+
+            # print(x1,Cx,'\t',y1,Cy,'\t',z1,Cz)
+            #
+            # print(self.cart2sph(self.vertex_list[i])[1:])
+
+            self.vertex_list[i][0] = Cx
+            self.vertex_list[i][1] = Cy
+            self.vertex_list[i][2] = Cz
+
+            # print(self.cart2sph(self.vertex_list[i])[1:])
+
+
+
+                # x, y = self.sph2map(lat1,lat2,lon1,lon2)
+
+                # cv_x.append(x)
+                # cv_y.append(y)
+
+                # self.map2sph(lat1,lon1,x,y)
+
+            # A = 0
+            # Cx = 0
+            # Cy = 0
+            # for j in range(total):
+            #     j2 = (j+1)%total
+            #     A = A + (cv_x[j]*cv_y[(j+1)%total] - cv_x[(j+1)%total]*cv_y[j])
+            #     Cx = Cx + (cv_x[j] + cv_x[j2])*(cv_x[j]*cv_y[j2] - cv_x[j2]*cv_y[j])
+            #     Cy = Cy + (cv_y[j] + cv_y[j2])*(cv_x[j]*cv_y[j2] - cv_x[j2]*cv_y[j])
+            #
+            # A = 0.5*abs(A)
+            # Cx = Cx/(6*A)
+            # Cy = Cy/(6*A)
+
+            # nlat, nlon = self.map2sph(lat1,lon1, Cx, Cy)
+
+
+            # print(Cx,Cy)
+            # plt.scatter(cv_x, cv_y)
+            # plt.plot(0,0,'k+')
+            # plt.plot(Cx,Cy,'r+')
+            #
+            # plt.show()
+
 
     def haversine(self,lat1,lat2,lon1,lon2):
 
@@ -455,6 +621,8 @@ if __name__== '__main__':
     print("Finding triangular centroids...")
     icosahedron.find_centers()
 
+    # icosahedron.adjust_nodes_to_cv_centre()
+
 
     print("Finding arc lengths between centroids...")
     icosahedron.find_arc_lengths()
@@ -505,33 +673,33 @@ if __name__== '__main__':
     #            m.drawgreatcircle(lons[num],lats[num],lons[int(i)],lats[int(i)],c='k',lw=0.5)
     #
     #
-    #    total = 6
-    #    if icosahedron.friends[num][-1] < 0:
-    #        total = 5
     #
-    #    for i in range(total):
-    #        sph1 = icosahedron.centers[num][i]
-    #        lat1 = sph1[0]
-    #        lon1 = sph1[1]
+    # #    if icosahedron.friends[num][-1] < 0:
+    # #        total = 5
+    #    #
+    # #    for i in range(total):
+    # #        sph1 = icosahedron.centers[num][i]
+    # #        lat1 = sph1[0]
+    # #        lon1 = sph1[1]
+    #    #
+    # #        sph2 = icosahedron.centers[num][(i+1)%total]
+    # #        lat2 = sph2[0]
+    # #        lon2 = sph2[1]
+    #    #
+    # #        m.drawgreatcircle(lon1, lat1, lon2, lat2, c='b', lw=0.4)
+    #    #
+    # #        #x, y = m(lon,lat)
+    # #        #m.scatter(x, y, marker='o',s=2,color='k')
+    # #    for i in range(total):
+    # #        lat1 = icosahedron.arc_mids[num][i][0]
+    # #        lon1 = icosahedron.arc_mids[num][i][1]
+    #    #
+    #    #
+    # #        x, y = m(lon1,lat1)
+    # #        m.scatter(x, y, marker='o',s=2,color='k')
     #
-    #        sph2 = icosahedron.centers[num][(i+1)%total]
-    #        lat2 = sph2[0]
-    #        lon2 = sph2[1]
-    #
-    #        m.drawgreatcircle(lon1, lat1, lon2, lat2, c='b', lw=0.4)
-    #
-    #        #x, y = m(lon,lat)
-    #        #m.scatter(x, y, marker='o',s=2,color='k')
-    #    for i in range(total):
-    #        lat1 = icosahedron.arc_mids[num][i][0]
-    #        lon1 = icosahedron.arc_mids[num][i][1]
-    #
-    #
-    #        x, y = m(lon1,lat1)
-    #        m.scatter(x, y, marker='o',s=2,color='k')
-
     #    print(icosahedron.normals[num])
-
+    #
     # plt.show()
 
     # f = open('grid_l'+str(L)+'_testing.txt','w')
@@ -547,7 +715,7 @@ if __name__== '__main__':
     #     f.write(string)
     # f.close() # you can omit in most cases as the destructor will call it
 
-
+    #
     f = open('grid_l'+str(L)+'.txt','w')
     # f.write("ID     NODE_LAT      NODE_LON | FRIENDS LIST | CENTROID COORD LIST\n")
     f.write('{:<5s} {: <10s}   {: <10s}   {: <36s}  {:20s}'.format("ID", "NODE_LAT", "NODE_LON", "FRIENDS LIST", "CENTROID COORD LIST\n"))
