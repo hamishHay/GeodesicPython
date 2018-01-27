@@ -1,5 +1,6 @@
 //GridFile
 
+#include "Grid.h"
 #include "Node.h"
 #include <vector>
 
@@ -11,4 +12,4 @@ public:
   std::vector<Node> nodes;
 
   void addNode(Node n);
-}
+};
