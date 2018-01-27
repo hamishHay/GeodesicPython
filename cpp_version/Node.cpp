@@ -1,7 +1,7 @@
 #include "Node.h"
 #include "math_functions.h"
 
-Node::Node(double x, double y, double z)
+Node::Node(double x, double y, double z, int ID_num)
 {
   xyz_coords[0] = x;
   xyz_coords[1] = y;
