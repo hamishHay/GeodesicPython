@@ -19,7 +19,7 @@ class Node
     int friend_num;           // number of surrounding friends
 
     // Constructor takes xyz coords, and usually an ID
-    Node(double x, double y, double z, int ID_num=0);
+    Node(double xyz[], int ID_num=0);
 
     Node operator+(const Node &n);
     Node operator-(const Node &n);

@@ -14,7 +14,7 @@ public:
 
   std::vector<Node> nodes;
 
-  void addNode(Node n);
+  void addNode(Node &n);
 };
 
 #endif
