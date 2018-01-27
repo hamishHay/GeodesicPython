@@ -7,7 +7,7 @@
 class Grid
 {
 public:
-  Grid();
+  Grid(void);
 
   std::vector<Node> nodes;
 
