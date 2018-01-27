@@ -6,16 +6,17 @@ class Node
     double xyz_coords[3];     // cartesian coords
     double sph_coords[3];     // sphericala coords
     double ll_coords[3];      // lat-lon coords
+    int ID;
 
     Node * friends[6];        // array pointing to friends
     Node * temp_friends[6];   // array pointing to temp friends
 
     bool updated[6];          // have friends been updated?
 
-    int friend_num;           // number of surrounding friends 
+    int friend_num;           // number of surrounding friends
 
     // Constructor takes xyz coords, and usually an ID
-    Node(double x, double y, double z, int ID=0);
+    Node(double x, double y, double z, int ID_num=0);
 
     Node operator+(const Node &n);
     Node operator-(const Node &n);
