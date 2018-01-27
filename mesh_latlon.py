@@ -21,10 +21,10 @@ def does_intersect(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y):
 
     return 0
 
-def sph2map(lat1,lon1,lat2,lon2):
-    m = 2.0 * (1.0 + np.sin(lat2)*np.sin(lat1) + np.cos(lat1)*np.cos(lat2)*np.cos(lon2-lon1))
-    x = m * np.cos(lat2) * np.sin(lon2 - lon1)
-    y = m * (np.sin(lat2)*np.cos(lat1) - np.cos(lat2)*np.sin(lat1)*np.cos(lon2-lon1))
+def sph2map(lat1,lon1,lat2,lon2, r):
+    m = 2.0 / (1.0 + np.sin(lat2)*np.sin(lat1) + np.cos(lat1)*np.cos(lat2)*np.cos(lon2-lon1))
+    x = m * r * np.cos(lat2) * np.sin(lon2 - lon1)
+    y = m * r * (np.sin(lat2)*np.cos(lat1) - np.cos(lat2)*np.sin(lat1)*np.cos(lon2-lon1))
 
     if abs(x) < 1e-6: x = 0.0
     if abs(y) < 1e-6: y = 0.0
@@ -34,7 +34,7 @@ def sph2map(lat1,lon1,lat2,lon2):
 def distanceBetween(x1,y1,x2,y2):
     return np.sqrt((x2-x1)**2 + (y2-y1)**2)
 
-def getVandermondeMatrix(node_list, node_ID, inv=False):
+def getVandermondeMatrix(node_list, node_ID, r, inv=False):
     f_num = 6
     node = node_list[node_ID]
     if node.friends[-1] < 0:
@@ -52,11 +52,11 @@ def getVandermondeMatrix(node_list, node_ID, inv=False):
         lat2 = f1.lat
         lon2 = f1.lon
 
-        x, y = sph2map(lat1, lon1, lat2, lon2)
+        x, y = sph2map(lat1, lon1, lat2, lon2, r)
 
         V[i,0] = 1.0
         V[i,1] = x
-        V[i,2] = x**2.0
+        V[i,2] = (x**2.0)
         V[i,3] = y
         V[i,4] = x*y
         V[i,5] = y**2.0
@@ -66,28 +66,57 @@ def getVandermondeMatrix(node_list, node_ID, inv=False):
 
     U, L, VT = np.linalg.svd(V)
 
+    V2 = V.copy()
     V = VT.T
     UT = U.T
 
     L_inv = np.diag(1.0/L)
 
-    L_inv[abs(L_inv) > 4e1] = 0.0
+    # if L_inv[-1,-1] > 1e5:
+    #     L_inv[-1,-1] = 0.0
+
+    L_inv[abs(L_inv) > 2e1] = 0.0
 
     A_inv = np.linalg.multi_dot([V, L_inv, UT]) #V.dot(L_inv).dot(U)
 
+    # if np.trace(A_inv.dot(V2) > 1.1):
+    #     print(V2)
+    #     print(A_inv)
+    #     V3 = V2.copy()
+    #     V3[np.diag_indices_from(V3)] += 1e-8
+    #     V_inv2 = np.linalg.inv(V3)
+    #     print(V_inv2.dot(V2))
+    #     print(A_inv.dot(V2))
+
+
     if inv:
+        # print(A_inv, np.linalg.inv(V2))
+        # try:
+        #     A_inv = np.linalg.inv(V2)
+        #     # if np.amax(A_inv.dot(V2)) > 1.1:
+        #     #     return np.linalg.pinv(V2)
+        # except np.linalg.linalg.LinAlgError:
+        #     print("Matrix is ill-conditioned. Calculating pseudo-inverse.")
+        #     A_inv = np.linalg.pinv(V2, rcond=1e3)
+        #
+        # if np.amax(A_inv.dot(V2)) > 1.1 or np.amax(A_inv) > 1e3:
+        #     return np.linalg.pinv(V2,  rcond=1e3)
+
+        # A_inv = np.linalg.pinv(V2, rcond=1e0)
         return A_inv
 
     return V
 
-def test_interp(data_file, sl, grid, ll_lat, ll_lon, ll_grid_link, V_inv):
-    data = h5py.File(data_file, 'r')
+def test_interp(data_file, sl, grid, ll_lat, ll_lon, ll_grid_link, V_inv, r):
+    # data = h5py.File(data_file, 'r')
+    #
+    # n_field = np.array(data["displacement"][sl])
 
-    n_field = np.array(data["displacement"][sl])
 
     gg_lat = np.array(grid.lats)
     gg_lon = np.array(grid.lons)
 
+    n_field = 1000 * np.cos(2*gg_lat)**2 * np.sin(6*gg_lon)
     triang = tri.Triangulation(gg_lon, gg_lat)
 
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1,ncols=3,figsize=(12,3),dpi=120)
@@ -122,14 +151,18 @@ def test_interp(data_file, sl, grid, ll_lat, ll_lon, ll_grid_link, V_inv):
             lat2 = ll_lat[j]
             lon2 = ll_lon[i]
 
-            x, y = sph2map(lat1, lon1, lat2, lon2)
+            x, y = sph2map(lat1, lon1, lat2, lon2, r)
 
             # SET INVERSE VANDERMONDE MATRIX
             VAND_INV = V_inv[cell_ID]
 
+            # print(VAND_INV)
+
             # CALCULATE C COEFFS
             c = VAND_INV.dot(d)
             c = c[:, 0]
+            # print(c)
+
 
             # EXPAND FUNCTION TO FIND INTERPOLATED DATA
             data_interp[i,j] = c[0] + c[1]*x + c[2]*x**2.0 + c[3]*y + c[4]*y*x + c[5]*y**2.0
@@ -138,6 +171,7 @@ def test_interp(data_file, sl, grid, ll_lat, ll_lon, ll_grid_link, V_inv):
     data_interp = data_interp.T / 1e3
 
     tcnt2 = ax2.contourf(ll_lon, ll_lat, data_interp, 21, cmap = plt.cm.coolwarm)
+    # tcnt2 = ax2.contour(ll_lon, ll_lat, data_interp, 21, linewidths=0.5)
     cb2 = plt.colorbar(tcnt2, ax=ax2, orientation='horizontal', label="Pressure [kPa]")
     ax2.set_title("My interpolation")
 
@@ -161,7 +195,7 @@ def test_interp(data_file, sl, grid, ll_lat, ll_lon, ll_grid_link, V_inv):
     plt.show()
 
 def SaveVandermonde2HDF5(N, dx, node_list, V_inv, cell_pos):
-    f = h5py.File("grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + ".h5", 'w')
+    f = h5py.File("grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_test.h5", 'w')
 
     dset_v_inv = f.create_dataset("vandermonde_inv", (len(node_list),6,6), dtype='f8')
     dset_v_inv[:,:,:] = V_inv[:,:,:]
@@ -171,7 +205,9 @@ def SaveVandermonde2HDF5(N, dx, node_list, V_inv, cell_pos):
 
 N = int(sys.argv[1])
 
-dx = 2.0 # lat-lon grid spacing in degrees
+r = 1.0 #252.1e3
+
+dx = 1.0 # lat-lon grid spacing in degrees
 
 Grid = ReadGrid.read_grid(N)
 
@@ -207,7 +243,7 @@ for y in range(len(ll_lat)):
         lat2 = ll_lat[y]
         lon2 = ll_lon[x]
 
-        print("FINDING GEODESIC CELL ID FOR POS", np.degrees(lat2), np.degrees(lon2))
+        # print("FINDING GEODESIC CELL ID FOR POS", np.degrees(lat2), np.degrees(lon2))
 
         cent_dist = np.ones(6, dtype=np.float)*10.0
         friend_nums = np.ones(6, dtype=np.int)*-1
@@ -222,9 +258,9 @@ for y in range(len(ll_lat)):
             lat1 = nodes[ID_MASTER].lat
             lon1 = nodes[ID_MASTER].lon
 
-            p1_x, p1_y = sph2map(lat1, lon1, lat2, lon2)
+            p1_x, p1_y = sph2map(lat1, lon1, lat2, lon2, r)
             p2_x = p1_x
-            p2_x += 1.6
+            p2_x += r*np.deg2rad(5.0)
             p2_y = p1_y
 
             # print("SEARCHING NODE ID", ID_C)
@@ -241,8 +277,8 @@ for y in range(len(ll_lat)):
                 c1_lat, c1_lon = nodes[ID_C].centroids[i%f_num]
                 c2_lat, c2_lon = nodes[ID_C].centroids[(i+1)%f_num]
 
-                e1_x, e1_y = sph2map(lat1, lon1, c1_lat, c1_lon)
-                e2_x, e2_y = sph2map(lat1, lon1, c2_lat, c2_lon)
+                e1_x, e1_y = sph2map(lat1, lon1, c1_lat, c1_lon, r)
+                e2_x, e2_y = sph2map(lat1, lon1, c2_lat, c2_lon, r)
 
                 cn += does_intersect(p1_x, p1_y, p2_x, p2_y, e1_x, e1_y, e2_x, e2_y)
 
@@ -252,10 +288,10 @@ for y in range(len(ll_lat)):
                 gd2ll_ID[x, y] = ID_C
                 ID_MASTER = ID_C
 
-                V_inv[ID_C] = getVandermondeMatrix(nodes, ID_C, inv=True)
+                V_inv[ID_C] = getVandermondeMatrix(nodes, ID_C, r, inv=True)
 
                 v_max = max(v_max, np.amax(V_inv[ID_C]))
-                print("V MAX:", v_max)
+                # print("V MAX:", v_max)
 
 
             else:
@@ -294,6 +330,15 @@ for y in range(len(ll_lat)):
 #             ll_lat,
 #             ll_lon,
 #             gd2ll_ID,
-#             V_inv)
+#             V_inv,
+#             r)
 
 SaveVandermonde2HDF5(N, dx, nodes, V_inv, gd2ll_ID)
+
+# t = np.ones(6)
+# for i in range(len(ll_lat)):
+#     for j in range(len(ll_lon)):
+#
+#         print(V_inv[gd2ll_ID[j][i]].dot(t))
+#         print(V_inv[gd2ll_ID[j][i]])
+#         a = input()

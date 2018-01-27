@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Grid
 from Node import Node
-from timer import Timer
+# from timer import Timer
 import sys
 
 def main():
@@ -85,9 +85,11 @@ def main():
     grid.create_master_friends_list()
 
     grid.order_friends()
+    grid.spring_dynamics(N)
     grid.find_centers()
+    grid.shift_centroids()
 
-    grid.save_grid('grid_l'+str(N)+'.txt')
+    grid.save_grid('grid_l'+str(N)+'_test.txt')
 
 def sph2cart(r,theta,phi):
     theta = np.deg2rad(theta)

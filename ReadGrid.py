@@ -9,35 +9,27 @@ class Node:
     def __init__(self, lat, lon, ID):
         self.lat = lat
         self.lon = lon
+
+        # print(lat, lon)
+
+        self.coords_cart = self.sph2cart(np.pi*0.5 - lat, lon)
+        self.x = self.coords_cart[0]
+        self.y = self.coords_cart[1]
+        self.z = self.coords_cart[2]
+
         self.pos_sph = np.array([lat, lon])
         self.ID = ID
 
         self.friends = []
         self.centroids = []
+        self.centroids_cart = []
 
     def add_friend(self, ID):
         self.friends.append(ID)
 
     def add_centroid(self, lat, lon):
         self.centroids.append(np.array([lat, lon]))
-
-        # if len(self.centroids) == 6:
-        #     # print(self.centroids)
-        #     f_num = 6
-        #     if self.friends[-1] < 0:
-        #         f_num = 5
-        #
-        #     lat1 = self.lat
-        #     lon1 = self.lon
-        #
-        #     x_min = 0
-        #     x_max = 0
-        #     for i in range(f_num):
-        #         x, y = self.sph2map(lat1,lon1,self.centroids[i][0],self.centroids[i][1])
-        #         x_min = min(x_min, x)
-        #         x_max = max(x_max, x)
-        #
-        #     self.centroid_width = np.sqrt((x_max-x_min)**2.0)
+        self.centroids_cart.append(self.sph2cart(np.pi*0.5 - lat, lon))
 
     def sph2map(self,lat1,lon1,lat2,lon2):
         m = 2.0 * (1.0 + np.sin(lat2)*np.sin(lat1) + np.cos(lat1)*np.cos(lat2)*np.cos(lon2-lon1))
@@ -48,6 +40,18 @@ class Node:
         if abs(y) < 1e-6: y = 0.0
 
         return np.array([x, y])
+
+    def sph2cart(self, theta, phi, r=1.0):
+        theta = theta
+        phi = phi
+
+        x = r*np.sin(theta)*np.cos(phi)
+        y = r*np.sin(theta)*np.sin(phi)
+        z = r*np.cos(theta)
+
+        # coords_cart = np.array([x, y, z])
+
+        return np.array([x, y, z])
 
 
 class Shape:
@@ -66,7 +70,10 @@ class Shape:
 
 def read_grid(N):
 
-    load_file = '/home/hamish/Research/GeodesicODIS/input_files/grid_l' + str(N) + '.txt'
+    # load_file = '/home/hamish/Research/GeodesicODIS/input_files/grid_l' + str(N) + '.txt'
+    # load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '_test.txt'
+    load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '.txt'
+
 
     f = open(load_file,'r')
     lines = f.readlines()
