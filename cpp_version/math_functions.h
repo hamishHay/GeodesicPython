@@ -1,5 +1,5 @@
 #include <math.h>
-# define PI 3.141592653589793238462643383279502884L
+# define pi 3.141592653589793238462643383279502884L
 
 void cart2sph(double xyz[], double sph_coords[])
 {
