@@ -1,12 +1,14 @@
+#include <math.h>
+# define PI 3.141592653589793238462643383279502884L
 
 void cart2sph(double xyz[], double sph_coords[])
 {
   double x, y, z;
   double r, theta, phi;
 
-  x = xyz[0]
-  y = xyz[1]
-  z = xyz[2]
+  x = xyz[0];
+  y = xyz[1];
+  z = xyz[2];
 
   r = sqrt(x*x + y*y + z*z);
   theta = pi*0.5 - acos(z/r);

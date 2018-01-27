@@ -32,4 +32,4 @@ class Node
     // return the coordinates (or copy?) of the Node
     double * getCartCoords();
     double * getSphCoords();
-}
+};
