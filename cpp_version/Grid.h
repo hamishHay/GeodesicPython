@@ -1,5 +1,8 @@
 //GridFile
 
+#ifndef GRID_H_INCDLUDED
+#define GRID_H_INCDLUDED
+
 #include "Grid.h"
 #include "Node.h"
 #include <vector>
@@ -13,3 +16,5 @@ public:
 
   void addNode(Node n);
 };
+
+#endif

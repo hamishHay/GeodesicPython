@@ -1,6 +1,9 @@
 #include <math.h>
 # define pi 3.141592653589793238462643383279502884L
 
+#ifndef MATH_FUNCTIONS_H_INCDLUDED
+#define MATH_FUNCTIONS_H_INCDLUDED
+
 void cart2sph(double xyz[], double sph_coords[])
 {
   double x, y, z;
@@ -20,3 +23,5 @@ void cart2sph(double xyz[], double sph_coords[])
 
   if (phi*180./pi > 359.9) sph_coords[2] = 0.0;
 };
+
+#endif

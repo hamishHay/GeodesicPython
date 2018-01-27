@@ -1,5 +1,8 @@
 //NODE FILE
 
+#ifndef NODE_H_INCDLUDED
+#define NODE_H_INCDLUDED
+
 class Node
 {
   public:
@@ -33,3 +36,5 @@ class Node
     double * getCartCoords();
     double * getSphCoords();
 };
+
+#endif
