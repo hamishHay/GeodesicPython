@@ -49,18 +49,6 @@ class Grid:
                     middle = 0.5*(node + friend)
                     middle = middle/np.sqrt(np.sum((middle**2)))
 
-                    # (lat1, lon1) = node.coords_sph[1:]
-                    # (lat2, lon2) = friend.coords_sph[1:]
-                    #
-                    # middle2 = self.find_arc_midpoint(lat1, lat2, lon1, lon2)
-                    # middle2 = self.sph2cart(1.0, np.pi*0.5 - middle2[0], middle2[1])
-                    #
-                    # test = middle
-                    # test = self.cart2sph
-                    # middle2[0] = -middle2[0]
-                    # middle2[1] = -middle2[1]
-                    # print(middle - middle2)
-
                     # create new node based on the midpoint location
                     node_count += 1
                     new_node = Node(middle[0], middle[1], middle[2], node_count)
@@ -95,6 +83,8 @@ class Grid:
                     # set the update list to inform the node that this friend
                     # has been updated
                     node.updated[j] = 1
+
+                    # print()
 
 
         # Step 2: Add the other friends for newly created nodes

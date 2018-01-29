@@ -13,10 +13,10 @@ class Node
     double ll_coords[3];      // lat-lon coords
     int ID;
 
-    std::vector<Node> friends_list;        // array pointing to friends
-    std::vector<Node> temp_friends;   // array pointing to temp friends
+    std::vector<Node *> friends_list;        // array pointing to friends
+    std::vector<Node *> temp_friends;     // array pointing to temp friends
 
-    bool updated[6];          // have friends been updated?
+    std::vector<int> updated = std::vector<int> (6, 0);          // have friends been updated?
 
     int friend_num;           // number of surrounding friends
 
@@ -26,21 +26,25 @@ class Node
     // Copy constructor
     Node(const Node &n);
 
-    Node operator+(const Node &n);
+    Node * operator+(const Node &n);
     Node operator-(const Node &n);
+    Node * operator*(const double scalar);
+    bool operator==(const Node &n);
     Node & operator=(const Node &n);
 
     // function adds a node to frieds array
-    int addFriend(Node &n);
-    int addTempFriend(Node &n);
+    void addFriend(Node * n);
+    void addTempFriend(Node * n);
 
     // project current xyz coords onto sphere of radius r
-    void project2Sphere(double radius);
+    void project2Sphere(double r=1.0);
 
     // return the coordinates (or copy?) of the Node
     double * getCartCoords();
     double * getSphCoords();
     double getMagnitude();
+
+    void printCoords();
 };
 
 #endif

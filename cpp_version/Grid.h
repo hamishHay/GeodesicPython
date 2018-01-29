@@ -14,11 +14,13 @@ public:
   Grid(void);
 
   std::vector< std::vector<int> > friends_list;
-  std::vector<Node> nodes;
+  std::vector<Node*> node_list;
 
-  void addNode(Node &n);
+  void addNode(Node * n);
 
   void findFriends(void);
+
+  void bisectEdges(void);
 };
 
 #endif

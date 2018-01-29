@@ -76,22 +76,24 @@ int main()
 
   grid = Grid();
 
-  grid.addNode(n0);
-  grid.addNode(n1);
-  grid.addNode(n2);
-  grid.addNode(n3);
+  grid.addNode(&n0);
+  grid.addNode(&n1);
+  grid.addNode(&n2);
+  grid.addNode(&n3);
 
-  grid.addNode(n4);
-  grid.addNode(n5);
-  grid.addNode(n6);
-  grid.addNode(n7);
+  grid.addNode(&n4);
+  grid.addNode(&n5);
+  grid.addNode(&n6);
+  grid.addNode(&n7);
 
-  grid.addNode(n8);
-  grid.addNode(n9);
-  grid.addNode(n10);
-  grid.addNode(n11);
+  grid.addNode(&n8);
+  grid.addNode(&n9);
+  grid.addNode(&n10);
+  grid.addNode(&n11);
 
   grid.findFriends();
+
+  grid.bisectEdges();
 
   return 1;
 };
