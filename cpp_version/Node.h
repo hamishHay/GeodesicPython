@@ -3,6 +3,8 @@
 #ifndef NODE_H_INCDLUDED
 #define NODE_H_INCDLUDED
 
+#include <vector>
+
 class Node
 {
   public:
@@ -11,8 +13,8 @@ class Node
     double ll_coords[3];      // lat-lon coords
     int ID;
 
-    Node * friends[6];        // array pointing to friends
-    Node * temp_friends[6];   // array pointing to temp friends
+    std::vector<Node> friends_list;        // array pointing to friends
+    std::vector<Node> temp_friends;   // array pointing to temp friends
 
     bool updated[6];          // have friends been updated?
 
@@ -21,9 +23,12 @@ class Node
     // Constructor takes xyz coords, and usually an ID
     Node(double xyz[], int ID_num=0);
 
+    // Copy constructor
+    Node(const Node &n);
+
     Node operator+(const Node &n);
     Node operator-(const Node &n);
-    Node operator=(const Node &n);
+    Node & operator=(const Node &n);
 
     // function adds a node to frieds array
     int addFriend(Node &n);
@@ -35,6 +40,7 @@ class Node
     // return the coordinates (or copy?) of the Node
     double * getCartCoords();
     double * getSphCoords();
+    double getMagnitude();
 };
 
 #endif

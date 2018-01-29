@@ -10,11 +10,15 @@
 class Grid
 {
 public:
+
   Grid(void);
 
+  std::vector< std::vector<int> > friends_list;
   std::vector<Node> nodes;
 
   void addNode(Node &n);
+
+  void findFriends(void);
 };
 
 #endif
