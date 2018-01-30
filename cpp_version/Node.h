@@ -18,6 +18,8 @@ class Node
 
     std::vector<int> updated = std::vector<int> (6, 0);          // have friends been updated?
 
+    std::vector< std::vector<double> > centroids = std::vector< std::vector<double> > (6, std::vector<double> (3));
+
     int friend_num;           // number of surrounding friends
 
     // Constructor takes xyz coords, and usually an ID
@@ -36,6 +38,7 @@ class Node
     // function adds a node to frieds array
     void addFriend(Node * n);
     void addTempFriend(Node * n);
+    void addCentroids(std::vector<double> ll_coords);
 
     // project current xyz coords onto sphere of radius r
     void project2Sphere(double r=1.0);

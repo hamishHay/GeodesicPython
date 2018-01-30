@@ -90,9 +90,6 @@ void Node::getMapCoords(const Node &center_node, double xy[])
 
   xy[0] = m * cos(lat2) * sin(lon2 - lon1);
   xy[1] = m * (sin(lat2)*cos(lat1) - cos(lat2)*sin(lat1)*cos(lon2-lon1));
-
-  // return map_xy;
-
 }
 
 Node * Node::operator+(const Node &other_node)

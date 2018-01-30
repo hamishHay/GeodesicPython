@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <stdio.h>
 
 struct AngleSort{
   double ang;
@@ -13,7 +14,10 @@ struct AngleSort{
   bool operator<( const AngleSort& rhs ) const { return ang < rhs.ang; }
 };
 
-Grid::Grid(void){};
+Grid::Grid(void)
+{
+  this->recursion_lvl = 0;
+};
 
 void Grid::addNode(Node *n)
 {
@@ -127,8 +131,11 @@ void Grid::bisectEdges(void)
     Node * inter_friend1, * inter_friend2;
     std::vector< Node * > new_nodes;
 
+    this->recursion_lvl += 1;
+
     node_count = this->node_list.size()-1;
 
+    std::cout<<'\t'<<"Beginning bisection..."<<std::flush;
     for (i=0; i<node_list.size(); i++)
     {
         node = this->node_list[i];
@@ -171,7 +178,9 @@ void Grid::bisectEdges(void)
             }
         }
     }
+    std::cout<<"\r\tBeginning bisection... complete!"<<std::endl;
 
+    std::cout<<'\t'<<"Determining all friends of new nodes..."<<std::flush;
     for (i=0; i<node_list.size(); i++)
     {
         node = this->node_list[i];
@@ -196,6 +205,7 @@ void Grid::bisectEdges(void)
             }
         }
     }
+    std::cout<<'\r'<<"\tDetermining all friends of new nodes... complete!"<<std::endl;
 
     double dot_prod;
     double det;
@@ -203,6 +213,7 @@ void Grid::bisectEdges(void)
     double cosx, rad;
     double inner_angle;
 
+    std::cout<<'\t'<<"Ordering friends of new nodes..."<<std::flush;
     for (i=0; i<new_nodes.size(); i++)
     {
       //Order the friends of the new guys
@@ -240,7 +251,9 @@ void Grid::bisectEdges(void)
       }
 
     }
+    std::cout<<'\r'<<"\tOrdering friends of new nodes... complete!"<<std::endl;
 
+    std::cout<<'\t'<<"Assigning new nodes to old nodes..."<<std::flush;
     for (i=0; i<node_list.size(); i++)
     {
         node = this->node_list[i];
@@ -252,9 +265,11 @@ void Grid::bisectEdges(void)
 
         node->temp_friends.clear();
     }
+    std::cout<<'\r'<<"\tAssigning new nodes to old nodes... complete!"<<std::endl;
 
+    std::cout<<'\t'<<"Adding new nodes to master list..."<<std::flush;
     node_list.insert(node_list.end(),new_nodes.begin(),new_nodes.end());
-
+    std::cout<<'\r'<<"\tAdding new nodes to master list... complete!"<<std::endl;
 
     // WE COULD ORDER NEW NODES HERE. ONCE A NODE HAS IT'S FRIENDS
     // ORDERED IT SHOULD NEVER DO IT AGAIN.
@@ -279,3 +294,85 @@ void Grid::bisectEdges(void)
     // }
 
 };
+
+void Grid::findCentroids(void)
+{
+    int i, j, k;
+    double mag;
+    Node * node, *node_friend, *node_friend2;
+    double xy_center[3];
+    double sph_center[3];
+
+    for (i=0; i<node_list.size(); i++)
+    {
+        node = this->node_list[i];
+        for (j=0; j<node->friend_num; j++)
+        {
+            node_friend  = node->friends_list[j];
+            node_friend2 = node->friends_list[(j+1)%node->friend_num];
+
+            for (k=0; k<3; k++) {
+                xy_center[k] = (node->xyz_coords[k]
+                                + node_friend->xyz_coords[k]
+                                + node_friend2->xyz_coords[k])/3.0;
+            }
+
+            mag = sqrt(xy_center[0]*xy_center[0] + xy_center[1]*xy_center[1] + xy_center[2]*xy_center[2]);
+            xy_center[0] /= mag;
+            xy_center[1] /= mag;
+            xy_center[2] /= mag;
+
+            cart2sph(xy_center, sph_center);
+
+            node->centroids[j][0] = sph_center[0];
+            node->centroids[j][1] = sph_center[1];
+            node->centroids[j][2] = sph_center[2];
+
+        }
+
+        if (node->friend_num == 5)
+        {
+            node->centroids[5][0] = -1.0;
+            node->centroids[5][1] = -1.0;
+            node->centroids[5][2] = -1.0;
+        }
+    }
+}
+
+void Grid::saveGrid2File(void)
+{
+    FILE * outFile;
+    Node * node;
+    double lat, lon;
+    int i, j;
+    int f[6];
+    double cx[6], cy[6];
+
+    outFile = fopen("test_file.txt", "w");
+
+    fprintf(outFile, "%-5s %-12s %-12s %-38s %-20s\n", "ID", "NODE LAT", "NODE LON", "FRIENDS LIST", "CENTROID COORD LIST");
+
+    for (i=0; i<this->node_list.size(); i++)
+    {
+        node = this->node_list[i];
+        lat = node->sph_coords[1]*180./pi;
+        lon = node->sph_coords[2]*180./pi;
+        for (j=0; j<node->friend_num; j++)
+        {
+            f[j] = node->friends_list[j]->ID;
+            cx[j] = node->centroids[j][1]*180./pi;
+            cy[j] = node->centroids[j][2]*180./pi;
+        }
+        if (node->friend_num == 5) {
+            f[5] = -1;
+            cx[j] = -1.0;
+            cy[j] = -1.0;
+        }
+        fprintf(outFile, "%-5d %12.7f %12.7f { %4d, %4d, %4d, %4d, %4d, %4d}, {( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f)} \n",
+                i, lat, lon, f[0], f[1], f[2], f[3], f[4], f[5],
+                cx[0], cy[0], cx[1], cy[1], cx[2], cy[2], cx[3], cy[3], cx[4], cy[4], cx[5], cy[5]);
+    }
+
+
+    fclose(outFile);
+}

@@ -13,6 +13,7 @@ public:
 
   Grid(void);
 
+  int recursion_lvl;
   std::vector< std::vector<int> > friends_list;
   std::vector<Node*> node_list;
 
@@ -21,6 +22,10 @@ public:
   void findFriends(void);
 
   void bisectEdges(void);
+
+  void findCentroids(void);
+
+  void saveGrid2File(void);
 };
 
 #endif

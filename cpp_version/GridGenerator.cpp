@@ -5,8 +5,11 @@
 #include "math_functions.h"
 #include <math.h>
 #include <iostream>
+#include <stdio.h>
+#include <sstream>
+#include <stdexcept>
 
-int main()
+int main(int argc, char* argv[])
 {
   Grid grid;
 
@@ -93,14 +96,25 @@ int main()
 
   grid.findFriends();
 
-  int N = 10;
+  std::istringstream iss( argv[1] );
+  int N;
+
+  if (iss >> N) {}
+  else throw std::invalid_argument( "Unsuccessful grid recursion argument! First argument must be an integer." );
+
+  if (N < 0) throw std::invalid_argument( "Grid recursion level must be greater than zero." );
+
   for (int i=0; i<N; i++)
   {
+    std::cout<<std::endl<<"Bisecting edges: recursion level "<< i+1 <<'.'<<std::endl;
     grid.bisectEdges();
-
   }
 
-  std::cout<<grid.node_list.size()<<std::endl;
+  grid.findCentroids();
+
+  std::cout<<std::endl<<"Grid generated. Total node #: "<<grid.node_list.size()<<std::endl;
+
+  grid.saveGrid2File();
 
   return 1;
 };

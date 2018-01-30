@@ -1,6 +1,6 @@
 CC = g++-6
 
-CFLAGS = -c -Wall
+CFLAGS = -c -O3 -Wall
 
 all: GridGenerator
 
