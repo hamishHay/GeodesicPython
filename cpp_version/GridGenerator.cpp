@@ -93,7 +93,14 @@ int main()
 
   grid.findFriends();
 
-  grid.bisectEdges();
+  int N = 10;
+  for (int i=0; i<N; i++)
+  {
+    grid.bisectEdges();
+
+  }
+
+  std::cout<<grid.node_list.size()<<std::endl;
 
   return 1;
 };

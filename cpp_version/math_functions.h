@@ -1,4 +1,5 @@
 #include <math.h>
+#include <iostream>
 # define pi 3.141592653589793238462643383279502884L
 
 #ifndef MATH_FUNCTIONS_H_INCDLUDED
@@ -18,11 +19,12 @@ void inline cart2sph(double xyz[], double sph_coords[])
   theta = pi*0.5 - acos(z/r);
   phi = atan2(y,x);
 
+
   sph_coords[0] = r;
   sph_coords[1] = theta;
   sph_coords[2] = phi+pi;
 
-  if (phi*180./pi > 359.9) sph_coords[2] = 0.0;
+  if ((phi+phi)*180./pi > 359.9) sph_coords[2] = 0.0;
 };
 
 void inline sph2cart(double sph_coords[], double xyz[], bool rad);
@@ -33,6 +35,7 @@ void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)
   r = sph_coords[0];
   theta = sph_coords[1];
   phi = sph_coords[2];
+
 
   if (!rad)
   {

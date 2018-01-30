@@ -10,7 +10,6 @@ Node::Node(double xyz[], int ID_num)
   ID = ID_num;
 
   cart2sph(xyz_coords, sph_coords);
-
   // friends_list
 };
 
@@ -66,10 +65,34 @@ void Node::addTempFriend(Node * n)
 
 void Node::printCoords()
 {
+    // std::cout<<"Coordinates of node "<<this->ID<<": "<<std::endl;
+    // std::cout<<"x: "<<this->xyz_coords[0]<<", ";
+    // std::cout<<"y: "<<this->xyz_coords[1]<<", ";
+    // std::cout<<"z: "<<this->xyz_coords[2]<<std::endl;
+
     std::cout<<"Coordinates of node "<<this->ID<<": "<<std::endl;
-    std::cout<<"x: "<<this->xyz_coords[0]<<", ";
-    std::cout<<"y: "<<this->xyz_coords[1]<<", ";
-    std::cout<<"z: "<<this->xyz_coords[2]<<std::endl;
+    std::cout<<"lat: "<<this->sph_coords[1]*180./pi<<", ";
+    std::cout<<"lon: "<<this->sph_coords[2]*180./pi<<std::endl;
+}
+
+void Node::getMapCoords(const Node &center_node, double xy[])
+{
+  double map_xy[2];
+  double m;
+  double lat1, lat2, lon1, lon2;
+
+  lat1 = this->sph_coords[1];
+  lon1 = this->sph_coords[2];
+  lat2 = center_node.sph_coords[1];
+  lon2 = center_node.sph_coords[2];
+
+  m = 2.0 / (1.0 + sin(lat2)*sin(lat1) + cos(lat1)*cos(lat2)*cos(lon2-lon1));
+
+  xy[0] = m * cos(lat2) * sin(lon2 - lon1);
+  xy[1] = m * (sin(lat2)*cos(lat1) - cos(lat2)*sin(lat1)*cos(lon2-lon1));
+
+  // return map_xy;
+
 }
 
 Node * Node::operator+(const Node &other_node)
@@ -90,6 +113,12 @@ bool Node::operator==(const Node &other_node)
 {
   if (this->ID == other_node.ID) return true;
   else return false;
+}
+
+bool Node::operator!=(const Node &other_node)
+{
+  if (this->ID == other_node.ID) return false;
+  else return true;
 }
 
 Node * Node::operator*(const double scalar)

@@ -30,6 +30,7 @@ class Node
     Node operator-(const Node &n);
     Node * operator*(const double scalar);
     bool operator==(const Node &n);
+    bool operator!=(const Node &n);
     Node & operator=(const Node &n);
 
     // function adds a node to frieds array
@@ -42,6 +43,7 @@ class Node
     // return the coordinates (or copy?) of the Node
     double * getCartCoords();
     double * getSphCoords();
+    void getMapCoords(const Node &n, double xy[]);
     double getMagnitude();
 
     void printCoords();
