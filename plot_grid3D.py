@@ -5,6 +5,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.basemap import Basemap
 import sys
 from netCDF4 import Dataset
+import ReadGrid
 
 N = int(sys.argv[1])
 
@@ -15,9 +16,9 @@ fig = plt.figure()
 ax = Axes3D(fig)
 
 lighting = False
-cv = False
+cv = True
 
-data
+# data
 
 # x = [0,1,1,0]
 # y = [0,0,1,1]
@@ -30,6 +31,9 @@ light_mag = np.sqrt(sum(light**2))
 
 verts_added = []
 for node in nodes:
+    # fig = plt.figure()
+    # ax = Axes3D(fig)
+    # print(node.ID, node.friends)
     f_num = 6
     if node.friends[-1] == -1:
         f_num = 5
@@ -108,7 +112,7 @@ for node in nodes:
             curr_triang = list(np.sort([node.ID, f_ID1, f_ID2]))
             if len(verts_added) == 0:
                 # ax.add_collection3d(Poly3DCollection(verts, linewidths=0.6, edgecolors=(0,0,0,1),facecolor=col))
-                ax.add_collection3d(Poly3DCollection(verts, linewidths=0.3, edgecolors=(0.9,0.9,0.9,1.0),facecolor=(col,0,0,0.8)))
+                ax.add_collection3d(Poly3DCollection(verts, linewidths=0.6, edgecolors=(0.0,0.0,0.0,1.0),facecolor=(col,0,0,0.0)))
                 verts_added.append(curr_triang)
 
             added = False
@@ -118,14 +122,32 @@ for node in nodes:
 
             if not added:
                 print("plotting ", curr_triang)
-                # ax.add_collection3d(Poly3DCollection(verts, linewidths=0.3, edgecolors=(0,0,0,1),facecolor=col))
-                ax.add_collection3d(Poly3DCollection(verts, linewidths=0.3, edgecolors=(0.9,0.9,0.9,1.0),facecolor=(col,0,0,0.8)))
+                # ax.add_collection3d(Poly3DCollection(verts, linewidths=0.6, edgecolors=(0,0,0,1),facecolor=col))
+                ax.add_collection3d(Poly3DCollection(verts, linewidths=0.6, edgecolors=(0.0,0.0,0.0,1.0),facecolor=(col,0,0,0.0)))
 
                 verts_added.append(curr_triang)
 
     if cv:
         verts = [list(zip(x, y,z))]
         ax.add_collection3d(Poly3DCollection(verts, linewidths=0.3, edgecolors=(1*col,1*col,1*col,1.0),facecolor=(col,0,0,1.0)))
+
+    # ax.set_aspect('equal')
+    #
+    # view_lim = 1.
+    # ax.set_xlim([-view_lim,view_lim])
+    # ax.set_ylim([-view_lim,view_lim])
+    # ax.set_zlim([-view_lim,view_lim])
+    #
+    # ax.view_init(elev=20., azim=-60)
+    #
+    # # plt.axis('off')
+    #
+    # # savename = "/home/hamish/Dropbox/TAPS/grid_l" + str(N)
+    # # if lighting:
+    # #     savename += '_lighting'
+    # # savename += ".pdf"
+    # # plt.savefig(savename, bbox_inches='tight', transparent=True, facecolor=(0.05, 0.05, 0.05), edgecolor='none')
+    # plt.show()
 
 ax.set_aspect('equal')
 
@@ -143,4 +165,4 @@ if lighting:
     savename += '_lighting'
 savename += ".pdf"
 # plt.savefig(savename, bbox_inches='tight', transparent=True, facecolor=(0.05, 0.05, 0.05), edgecolor='none')
-# plt.show()
+plt.show()

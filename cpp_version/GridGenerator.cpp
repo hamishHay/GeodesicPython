@@ -110,6 +110,7 @@ int main(int argc, char* argv[])
     grid.bisectEdges();
   }
 
+  grid.orderFriends();
   grid.findCentroids();
 
   std::cout<<std::endl<<"Grid generated. Total node #: "<<grid.node_list.size()<<std::endl;

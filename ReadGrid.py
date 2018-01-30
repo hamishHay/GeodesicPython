@@ -71,8 +71,8 @@ class Shape:
 def read_grid(N):
 
     # load_file = '/home/hamish/Research/GeodesicODIS/input_files/grid_l' + str(N) + '.txt'
-    # load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '_test.txt'
-    load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '.txt'
+    load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '_test_new.txt'
+    # load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '.txt'
 
 
     f = open(load_file,'r')

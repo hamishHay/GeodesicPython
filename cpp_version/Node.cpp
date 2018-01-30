@@ -77,14 +77,13 @@ void Node::printCoords()
 
 void Node::getMapCoords(const Node &center_node, double xy[])
 {
-  double map_xy[2];
   double m;
   double lat1, lat2, lon1, lon2;
 
-  lat1 = this->sph_coords[1];
-  lon1 = this->sph_coords[2];
-  lat2 = center_node.sph_coords[1];
-  lon2 = center_node.sph_coords[2];
+  lat1 = center_node.sph_coords[1];
+  lon1 = center_node.sph_coords[2];
+  lat2 = this->sph_coords[1];
+  lon2 = this->sph_coords[2];
 
   m = 2.0 / (1.0 + sin(lat2)*sin(lat1) + cos(lat1)*cos(lat2)*cos(lon2-lon1));
 

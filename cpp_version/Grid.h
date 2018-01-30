@@ -21,9 +21,13 @@ public:
 
   void findFriends(void);
 
+  void orderFriends(void);
+
   void bisectEdges(void);
 
   void findCentroids(void);
+
+  void shiftNodes(void);
 
   void saveGrid2File(void);
 };

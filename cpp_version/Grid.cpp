@@ -45,10 +45,13 @@ void Grid::findFriends(void)
 
                 dist = (*nodeA - *nodeB).getMagnitude();
 
-                if (dist < 1.6)
+                // std::cout<<dist<<std::endl;
+
+                if (dist < 1.06)
                 {
                     surrounding_nodes.push_back( nodeB->ID );
-                    nodeA->addFriend( nodeB );
+                    if (nodeA->friends_list.size()<5) nodeA->addFriend( nodeB );
+                    // if (nodeB->friends_list.size()<5) nodeB->addFriend( nodeA );
                 }
             }
         }
@@ -65,33 +68,30 @@ void Grid::findFriends(void)
     double cosx, rad;
     double inner_angle;
 
+    // std::cout<<'\t'<<"Ordering friends of new nodes..."<<std::flush;
     for (i=0; i<node_list.size(); i++)
     {
       //Order the friends of the new guys
       // double v1[2], v2[2];
 
-      std::vector<double> angles(5);
       std::vector<AngleSort> ordered_friends(5);
       double v1[2] = {0., 1.};
       double v2[2];
+      double angle;
 
       node = node_list[i];
       for (j=0; j<5; j++)
       {
+        std::cout<<node->friends_list.size()<<std::endl;
         node_friend = node->friends_list[j];
         node_friend->getMapCoords(*node, v2);
 
         dot_prod = v1[0]*v2[0] + v1[1]*v2[1];
-        mag1 = sqrt(v1[0]*v1[0] + v1[1]*v1[1]);
-        mag2 = sqrt(v2[0]*v2[0] + v2[1]*v2[1]);
 
-        inner_angle = acos(dot_prod/(mag1*mag2))*180./pi;
         det = v1[0]*v2[1] - v1[1]*v2[0];
 
-        if (det < 0.0) ordered_friends[j].ang = inner_angle;
-        else ordered_friends[j].ang = 360. - inner_angle;
+        ordered_friends[j].ang = atan2(dot_prod, det)*180./pi;
 
-        ordered_friends[j].ang = angles[j];
         ordered_friends[j].node = node_friend;
       }
 
@@ -103,23 +103,6 @@ void Grid::findFriends(void)
       }
 
     }
-
-    // for (i=0; i<node_list.size(); i++)
-    // {
-    //     node = node_list[i];
-    //     node->printCoords();
-    //
-    //     std::cout<<node->ID<<'\t'<<std::endl;
-    //     for (j=0; j<node->friend_num; j++)
-    //     {
-    //         // node->friends_list[j] = node->temp_friends[j];
-    //         // node->updated[j] = 0;
-    //         std::cout<<node->friends_list[j]->ID<<' ';
-    //     }
-    //     std::cout<<std::endl<<std::endl;
-    //
-    //     node->temp_friends.clear();
-    // }
 };
 
 void Grid::bisectEdges(void)
@@ -207,52 +190,6 @@ void Grid::bisectEdges(void)
     }
     std::cout<<'\r'<<"\tDetermining all friends of new nodes... complete!"<<std::endl;
 
-    double dot_prod;
-    double det;
-    double mag1, mag2;
-    double cosx, rad;
-    double inner_angle;
-
-    std::cout<<'\t'<<"Ordering friends of new nodes..."<<std::flush;
-    for (i=0; i<new_nodes.size(); i++)
-    {
-      //Order the friends of the new guys
-      // double v1[2], v2[2];
-
-      std::vector<double> angles(6);
-      std::vector<AngleSort> ordered_friends(6);
-      double v1[2] = {0., 1.};
-      double v2[2];
-
-      node = new_nodes[i];
-      for (j=0; j<6; j++)
-      {
-        node_friend = node->friends_list[j];
-        node_friend->getMapCoords(*node, v2);
-
-        dot_prod = v1[0]*v2[0] + v1[1]*v2[1];
-        mag1 = sqrt(v1[0]*v1[0] + v1[1]*v1[1]);
-        mag2 = sqrt(v2[0]*v2[0] + v2[1]*v2[1]);
-
-        inner_angle = acos(dot_prod/(mag1*mag2))*180./pi;
-        det = v1[0]*v2[1] - v1[1]*v2[0];
-
-        if (det < 0.0) ordered_friends[j].ang = inner_angle;
-        else ordered_friends[j].ang = 360. - inner_angle;
-
-        ordered_friends[j].node = node_friend;
-      }
-
-      std::sort(ordered_friends.begin(), ordered_friends.end());
-
-      for (j=0; j<6; j++)
-      {
-        node->friends_list[j] = ordered_friends[j].node;
-      }
-
-    }
-    std::cout<<'\r'<<"\tOrdering friends of new nodes... complete!"<<std::endl;
-
     std::cout<<'\t'<<"Assigning new nodes to old nodes..."<<std::flush;
     for (i=0; i<node_list.size(); i++)
     {
@@ -271,29 +208,43 @@ void Grid::bisectEdges(void)
     node_list.insert(node_list.end(),new_nodes.begin(),new_nodes.end());
     std::cout<<'\r'<<"\tAdding new nodes to master list... complete!"<<std::endl;
 
-    // WE COULD ORDER NEW NODES HERE. ONCE A NODE HAS IT'S FRIENDS
-    // ORDERED IT SHOULD NEVER DO IT AGAIN.
-
-
-
-    // for (i=0; i<node_list.size(); i++)
-    // {
-    //     node = node_list[i];
-    //     node->printCoords();
-    //
-    //     std::cout<<node->ID<<'\t'<<std::endl;
-    //     for (j=0; j<node->friend_num; j++)
-    //     {
-    //         // node->friends_list[j] = node->temp_friends[j];
-    //         // node->updated[j] = 0;
-    //         std::cout<<node->friends_list[j]->ID<<' ';
-    //     }
-    //     std::cout<<std::endl<<std::endl;
-    //
-    //     node->temp_friends.clear();
-    // }
-
 };
+
+void Grid::orderFriends(void)
+{
+    int i, j, k;
+    Node * node, *node_friend, *node_friend2;
+    double v2[2];
+
+    // std::cout<<'\t'<<"Ordering friends of new nodes..."<<std::flush;
+    for (i=0; i<node_list.size(); i++)
+    {
+      //Order the friends of the new guys
+      // double v1[2], v2[2];
+      node = node_list[i];
+
+      std::vector<AngleSort> ordered_friends(node->friend_num);
+
+
+      for (j=0; j<node->friend_num; j++)
+      {
+        node_friend = node->friends_list[j];
+        node_friend->getMapCoords(*node, v2);
+
+        ordered_friends[j].ang = atan2(v2[0], v2[1])*180./pi;// - 90.0 + 360.0;
+
+        ordered_friends[j].node = node_friend;
+      }
+
+      std::sort(ordered_friends.begin(), ordered_friends.end());
+
+      for (j=0; j<node->friend_num; j++)
+      {
+        node->friends_list[j] = ordered_friends[j].node;
+      }
+
+    }
+}
 
 void Grid::findCentroids(void)
 {
