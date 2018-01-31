@@ -246,6 +246,76 @@ void Grid::orderFriends(void)
     }
 }
 
+void Grid::shiftNodes(void)
+{
+    int i, j, k;
+    double mag;
+    Node * node1, *node2, *node3;
+    double sph1[3], sph2[3], sph3[3];
+    double xy_sub_centers[6][3];
+    double xy1[3], xy2[3], xy3[3];
+    double xy_new_center[3];
+    double sph_center[3];
+    double areas[6];
+    double area;
+
+    for (i=0; i<node_list.size(); i++)
+    {
+        node1 = this->node_list[i];
+        for (k=0; k<3; k++) {
+            sph1[k] = node1->sph_coords[k];
+            xy1[k] = node1->xyz_coords[k];
+        }
+        sph1[1] = pi*0.5 - sph1[1];
+        area = 0.0;
+        xy_new_center[0] = 0.0;
+        xy_new_center[1] = 0.0;
+        xy_new_center[2] = 0.0;
+        for (j=0; j<node1->friend_num; j++)
+        {
+            node2 = node1->friends_list[j];
+            node3 = node1->friends_list[(j+1)%node1->friend_num];
+
+            for (k=0; k<3; k++)
+            {
+                sph2[k] = node1->centroids[j][k];
+                sph3[k] = node1->centroids[(j+1)%node1->friend_num][k];
+            }
+
+            sph2[1] = pi*0.5 - sph2[1];
+            sph3[1] = pi*0.5 - sph3[1];
+
+            sph2cart(sph2, xy2);
+            sph2cart(sph3, xy3);
+
+            for (k=0; k<3; k++) xy_sub_centers[j][k] = (xy1[k]+xy2[k]+xy3[k])/3.0;
+            std::cout<<sph1[0]<<'\t'<<sph2[0]<<std::endl;
+
+            areas[j] = sphericalArea(sph1, sph2, sph3);
+            area += areas[j];
+
+        }
+
+        for (j=0; j<node1->friend_num; j++)
+        {
+            for (k=0; k<3; k++)
+            {
+                xy_new_center[k] += xy_sub_centers[j][k]*areas[j];
+            }
+        }
+
+        for (k=0; k<3; k++) xy_new_center[k] /= area;
+
+        mag = sqrt(xy_new_center[0]*xy_new_center[0]
+                +xy_new_center[1]*xy_new_center[1]
+                +xy_new_center[2]*xy_new_center[2]);
+
+        for (k=0; k<3; k++) xy_new_center[k] /= mag;
+
+        // std::cout<<node1->xyz_coords[1]<<'\t'<<xy_new_center[1]<<std::endl;
+    }
+}
+
 void Grid::findCentroids(void)
 {
     int i, j, k;

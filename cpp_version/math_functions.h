@@ -53,4 +53,44 @@ void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)
 
 };
 
+double inline sphericalLength(double sph_c1[], double sph_c2[]);
+double inline sphericalLength(double sph_c1[], double sph_c2[])
+{
+    double length;
+    double lat1, lat2, dlon, dlat;
+
+    lat1 = sph_c1[1];
+    lat2 = sph_c2[1];
+    dlat = lat2 - lat1;
+    dlon = sph_c2[2]-sph_c1[2];
+
+    length = sin(dlat*0.5)*sin(dlat*0.5);
+    length += cos(lat1)*cos(lat2)*sin(dlon*0.5)*sin(dlon*0.5);
+    length = 2.*asin(sqrt(length));
+
+    return length;
+}
+
+
+double inline sphericalArea(double sph_c1[], double sph_c2[], double sph_c3[]);
+double inline sphericalArea(double sph_c1[], double sph_c2[], double sph_c3[])
+{
+    double a, b, c;
+    double A, B, C, E;
+
+    a = sphericalLength(sph_c1, sph_c2);
+    b = sphericalLength(sph_c2, sph_c3);
+    c = sphericalLength(sph_c3, sph_c1);
+
+    A = acos((cos(a) - cos(b)*cos(c))/(sin(b)*sin(c)));
+    B = asin(sin(A)*sin(b)/sin(a));
+    C = asin(sin(A)*sin(c)/sin(a));
+
+    E = (A + B + C) - pi;
+
+    return fabs(E);
+}
+
+// void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)
+
 #endif

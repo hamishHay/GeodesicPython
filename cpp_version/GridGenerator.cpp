@@ -112,6 +112,7 @@ int main(int argc, char* argv[])
 
   grid.orderFriends();
   grid.findCentroids();
+  grid.shiftNodes();
 
   std::cout<<std::endl<<"Grid generated. Total node #: "<<grid.node_list.size()<<std::endl;
 
