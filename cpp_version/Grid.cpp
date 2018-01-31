@@ -289,7 +289,10 @@ void Grid::shiftNodes(void)
             sph2cart(sph3, xy3);
 
             for (k=0; k<3; k++) xy_sub_centers[j][k] = (xy1[k]+xy2[k]+xy3[k])/3.0;
-            std::cout<<sph1[0]<<'\t'<<sph2[0]<<std::endl;
+            // std::cout<<sph1[0]<<'\t'<<sph2[0]<<std::endl;
+            std::cout<<sph1[1]<<'\t'<<sph2[1]<<std::endl;
+            // cart2sph(xy2, sph3);
+            // std::cout<<i<<'\t'<<xy1[1]<<'\t'<<xy2[1]<<std::endl;
 
             areas[j] = sphericalArea(sph1, sph2, sph3);
             area += areas[j];
