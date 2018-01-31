@@ -91,6 +91,15 @@ void Node::getMapCoords(const Node &center_node, double xy[])
   xy[1] = m * (sin(lat2)*cos(lat1) - cos(lat2)*sin(lat1)*cos(lon2-lon1));
 }
 
+void Node::updateXYZ(const double xyz[])
+{
+    this->xyz_coords[0] = xyz[0];
+    this->xyz_coords[1] = xyz[1];
+    this->xyz_coords[2] = xyz[2];
+
+    cart2sph(xyz_coords, sph_coords);
+}
+
 Node * Node::operator+(const Node &other_node)
 {
   double new_coords[3];
@@ -152,6 +161,7 @@ Node & Node::operator=(const Node &other_node)
 
   // Maybe we shouldn't do this here?
   cart2sph(xyz_coords, sph_coords);
+  // sph_coords[1] = pi*0.5 - sph_coords[1];
 
   return *this;
 }

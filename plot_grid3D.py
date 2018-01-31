@@ -16,7 +16,7 @@ fig = plt.figure()
 ax = Axes3D(fig)
 
 lighting = False
-cv = True
+cv = False
 
 # data
 

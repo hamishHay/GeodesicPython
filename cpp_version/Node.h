@@ -43,6 +43,8 @@ class Node
     // project current xyz coords onto sphere of radius r
     void project2Sphere(double r=1.0);
 
+    void updateXYZ(const double xyz[]);
+
     // return the coordinates (or copy?) of the Node
     double * getCartCoords();
     double * getSphCoords();

@@ -258,19 +258,22 @@ void Grid::shiftNodes(void)
     double sph_center[3];
     double areas[6];
     double area;
+    double shifted_xyz[node_list.size()][3];
 
     for (i=0; i<node_list.size(); i++)
     {
         node1 = this->node_list[i];
         for (k=0; k<3; k++) {
-            sph1[k] = node1->sph_coords[k];
+            sph1[k] = node1->sph_coords[k];    //latitude
             xy1[k] = node1->xyz_coords[k];
         }
-        sph1[1] = pi*0.5 - sph1[1];
+
+
         area = 0.0;
         xy_new_center[0] = 0.0;
         xy_new_center[1] = 0.0;
         xy_new_center[2] = 0.0;
+
         for (j=0; j<node1->friend_num; j++)
         {
             node2 = node1->friends_list[j];
@@ -282,6 +285,7 @@ void Grid::shiftNodes(void)
                 sph3[k] = node1->centroids[(j+1)%node1->friend_num][k];
             }
 
+            sph1[1] = pi*0.5 - sph1[1];
             sph2[1] = pi*0.5 - sph2[1];
             sph3[1] = pi*0.5 - sph3[1];
 
@@ -289,10 +293,10 @@ void Grid::shiftNodes(void)
             sph2cart(sph3, xy3);
 
             for (k=0; k<3; k++) xy_sub_centers[j][k] = (xy1[k]+xy2[k]+xy3[k])/3.0;
-            // std::cout<<sph1[0]<<'\t'<<sph2[0]<<std::endl;
-            std::cout<<sph1[1]<<'\t'<<sph2[1]<<std::endl;
-            // cart2sph(xy2, sph3);
-            // std::cout<<i<<'\t'<<xy1[1]<<'\t'<<xy2[1]<<std::endl;
+
+            sph1[1] = pi*0.5 - sph1[1];
+            sph2[1] = pi*0.5 - sph2[1];
+            sph3[1] = pi*0.5 - sph3[1];
 
             areas[j] = sphericalArea(sph1, sph2, sph3);
             area += areas[j];
@@ -313,11 +317,21 @@ void Grid::shiftNodes(void)
                 +xy_new_center[1]*xy_new_center[1]
                 +xy_new_center[2]*xy_new_center[2]);
 
-        for (k=0; k<3; k++) xy_new_center[k] /= mag;
-
-        // std::cout<<node1->xyz_coords[1]<<'\t'<<xy_new_center[1]<<std::endl;
+        for (k=0; k<3; k++) {
+            xy_new_center[k] /= mag;
+            shifted_xyz[i][k] = xy_new_center[k];
+        }
     }
+
+    for (i=0; i<node_list.size(); i++)
+    {
+        node1 = this->node_list[i];
+        node1->updateXYZ(shifted_xyz[i]);
+    }
+
 }
+
+
 
 void Grid::findCentroids(void)
 {
