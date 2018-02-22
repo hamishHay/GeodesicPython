@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib as mpl
+# mpl.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -12,11 +14,11 @@ N = int(sys.argv[1])
 Grid = ReadGrid.read_grid(N)
 nodes = Grid.nodes
 
-fig = plt.figure()
+fig = plt.figure(figsize=(12,12))
 ax = Axes3D(fig)
 
 lighting = False
-cv = False
+cv = True
 
 # data
 
@@ -160,9 +162,9 @@ ax.view_init(elev=20., azim=-60)
 
 plt.axis('off')
 
-savename = "/home/hamish/Dropbox/TAPS/grid_l" + str(N)
+savename = "/home/hamish/Dropbox/grid_l" + str(N)
 if lighting:
     savename += '_lighting'
 savename += ".pdf"
-# plt.savefig(savename, bbox_inches='tight', transparent=True, facecolor=(0.05, 0.05, 0.05), edgecolor='none')
+plt.savefig(savename, bbox_inches='tight') #  , transparent=True, facecolor=(0.05, 0.05, 0.05), edgecolor='none')
 plt.show()

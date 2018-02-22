@@ -93,6 +93,58 @@ double inline sphericalArea(double sph_c1[], double sph_c2[], double sph_c3[])
     return fabs(E);
 }
 
+void inline crossProduct(double v1[], double v2[], double v1xv2[]);
+void inline crossProduct(double v1[], double v2[], double v1xv2[])
+{
+    v1xv2[0] = v1[1]*v2[2] - v2[1]*v1[2];
+    v1xv2[1] = -(v1[0]*v2[2] - v2[0]*v1[2]);
+    v1xv2[2] = v1[0]*v2[1] - v2[0]*v1[1];
+}
+
+double inline dotProduct(double v1[], double v2[]);
+double inline dotProduct(double v1[], double v2[])
+{
+    double v1Dotv2;
+
+    v1Dotv2 = v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
+
+    return v1Dotv2;
+}
+
+bool inline isInsideSphericalTriangle(double v1[], double v2[], double v3[], double v[]);
+bool inline isInsideSphericalTriangle(double v1[], double v2[], double v3[], double v[])
+{
+    double n1[3], n2[3], n3[3];
+    double s1[3], s2[3], s3[3];
+    int k;
+
+    crossProduct(v1, v2, n1);
+    crossProduct(v2, v3, n2);
+    crossProduct(v3, v1, n3);
+
+    for (k=0; k<3; k++)
+    {
+        s1[k] = v[k] - v1[k];
+        s2[k] = v[k] - v2[k];
+        s3[k] = v[k] - v3[k];
+    }
+
+    // if (v[2] < 0)
+    // {
+    //     for (k=0; k<3; k++)
+    //     {
+    //         n1[k] = -n1[k];
+    //         n2[k] = -n2[k];
+    //         n3[k] = -n3[k];
+    //     }
+    // }
+
+    // std::cout<<dotProduct(v, n1)<<'\t'<<dotProduct(v, n2)<<'\t'<<dotProduct(v, n3)<<std::endl;
+    if (dotProduct(v, n1) < 1e-8 && dotProduct(v, n2) < 1e-8 && dotProduct(v, n3) < 1e-8) return true;
+    // if (dotProduct(s1, n1) > -1e-8 && dotProduct(v, n2) > -1e-8 && dotProduct(v, n3) > -1e-8) return true;
+    else return false;
+}
+
 // void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)
 
 #endif

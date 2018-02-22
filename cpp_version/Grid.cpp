@@ -82,7 +82,7 @@ void Grid::findFriends(void)
       node = node_list[i];
       for (j=0; j<5; j++)
       {
-        std::cout<<node->friends_list.size()<<std::endl;
+        // std::cout<<node->friends_list.size()<<std::endl;
         node_friend = node->friends_list[j];
         node_friend->getMapCoords(*node, v2);
 
@@ -255,10 +255,11 @@ void Grid::shiftNodes(void)
     double xy_sub_centers[6][3];
     double xy1[3], xy2[3], xy3[3];
     double xy_new_center[3];
+    double new_xyz[3];
     double sph_center[3];
     double areas[6];
     double area;
-    double shifted_xyz[node_list.size()][3];
+    std::vector<std::vector<double>> shifted_xyz(node_list.size(), std::vector<double> (3));
 
     for (i=0; i<node_list.size(); i++)
     {
@@ -325,13 +326,20 @@ void Grid::shiftNodes(void)
 
     for (i=0; i<node_list.size(); i++)
     {
+        new_xyz[0] = shifted_xyz[i][0];
+        new_xyz[1] = shifted_xyz[i][1];
+        new_xyz[2] = shifted_xyz[i][2];
+
         node1 = this->node_list[i];
-        node1->updateXYZ(shifted_xyz[i]);
+        node1->updateXYZ(new_xyz);
     }
 
 }
 
-
+void Grid::defineRegion(int reg, int subReg, int ID[])
+{
+    for (int i=0; i < 3; i++) regions[reg][subReg][i] = ID[i]; //this->node_list[ID[i]];
+}
 
 void Grid::findCentroids(void)
 {
@@ -377,6 +385,150 @@ void Grid::findCentroids(void)
     }
 }
 
+void Grid::orderNodesByRegion(void)
+{
+    int i, j, k, f, current_region, current_subregion, node_num, current_node_ID;
+    int regIDs[3];
+    double v1[3], v2[3], v3[3], v[3];
+    Node * current_node;
+    Node * p1, * p2, * p3, * p;
+    bool inside;
+    std::vector<int> potential_IDs;
+
+    node_num = this->node_list.size();
+
+    std::vector<int> not_updated_IDs (this->node_list.size() - 12);
+    std::vector<int> updated_IDs;
+
+    // Add pentagons to respective regions
+    inside_region[0].push_back(0);
+    inside_region[0].push_back(1);
+    inside_region[0].push_back(2);
+    inside_region[0].push_back(8);
+
+    inside_region[1].push_back(3);
+    inside_region[1].push_back(9);
+
+    inside_region[2].push_back(4);
+    inside_region[2].push_back(10);
+
+    inside_region[3].push_back(5);
+    inside_region[3].push_back(11);
+
+    inside_region[4].push_back(6);
+    inside_region[4].push_back(7);
+
+    for (i=0; i < node_num - 12; i++)
+    {
+        not_updated_IDs[i] = i + 12;
+    }
+
+    i = not_updated_IDs[0];
+    int count = 0;
+    while (not_updated_IDs.size() > 0)
+    {
+        if (i >= node_list.size()) {
+            std::cout<<"ERROR!"<<std::endl;
+            break;
+        }
+
+
+        current_node = node_list[ i ];//not_updated_IDs[i + count]];
+        for (k = 0; k < 3; k++) v[k] = current_node->xyz_coords[k];
+
+        // std::cout<<current_node->ID<<'\t'<<v[0]<<'\t'<<v[1]<<'\t'<<v[2]<<std::endl;
+        // std::cout<<current_node->ID<<'\t'<<current_node->sph_coords[0]<<'\t'<<current_node->sph_coords[1]*180./pi<<'\t'<<current_node->sph_coords[2]*180./pi<<std::endl;
+        for (j=0; j < 20; j++)
+        {
+            // Find the IDs of the nodes defining this subregion
+            for (k = 0; k < 3; k++) regIDs[k] = regions[j/4][j%4][k];
+
+            // Get the pointers to the nodes defining this subregion
+            p1 = node_list[ regIDs[0] ];
+            p2 = node_list[ regIDs[1] ];
+            p3 = node_list[ regIDs[2] ];
+
+            // Define the position vectors of the nodes defining
+            // this subregion
+            for (k = 0; k < 3; k++)
+            {
+                v1[k] = p1->xyz_coords[k];
+                v2[k] = p2->xyz_coords[k];
+                v3[k] = p3->xyz_coords[k];
+            }
+
+            // std::cout<<p1->ID<<'\t'<<p1->sph_coords[0]<<'\t'<<p1->sph_coords[1]*180./pi<<'\t'<<p1->sph_coords[2]*180./pi<<std::endl;
+            // std::cout<<p2->ID<<'\t'<<p2->sph_coords[0]<<'\t'<<p2->sph_coords[1]*180./pi<<'\t'<<p2->sph_coords[2]*180./pi<<std::endl;
+            // std::cout<<p3->ID<<'\t'<<p3->sph_coords[0]<<'\t'<<p3->sph_coords[1]*180./pi<<'\t'<<p3->sph_coords[2]*180./pi<<std::endl;
+
+            // std::cout<<p1->ID<<", "<<p1->xyz_coords[0]<<", "<<p1->xyz_coords[1]<<", "<<p1->xyz_coords[2]<<std::endl;
+            // std::cout<<p2->ID<<", "<<p2->xyz_coords[0]<<", "<<p2->xyz_coords[1]<<", "<<p2->xyz_coords[2]<<std::endl;
+            // std::cout<<p3->ID<<", "<<p3->xyz_coords[0]<<", "<<p3->xyz_coords[1]<<", "<<p3->xyz_coords[2]<<std::endl;
+
+
+
+            // Check whether node resides inside current region
+            inside = isInsideSphericalTriangle(v1, v2, v3, v);
+
+
+            if (inside)
+            {
+                current_region = j/4;
+                current_subregion = j%4;
+
+                inside_region[current_region].push_back(current_node->ID);
+
+                // std::cout<<current_node->ID<<'\t'<<current_region<<'\t'<<current_subregion<<std::endl;
+
+                not_updated_IDs.erase(not_updated_IDs.begin()+count);
+                break;
+            }
+
+        }
+        // count++;
+        //
+        // f = current_node->friend_num;
+        // for (j=0; j<f; j++)
+        // {
+        //     potential_IDs.push_back(current_node->friends_list[j]->ID);
+        // }
+        //
+        if (!inside)
+        {
+            count++;
+        }
+
+        // std::cout<<current_node->ID<<std::endl;
+        // current_node_ID =
+
+        // i++;
+
+        i = not_updated_IDs[0 + count];//+count;
+        //
+        // std::cout<<not_updated_IDs.size()<<std::endl;
+
+
+    }
+
+    std::cout<<"Can't find regions for ";
+    for (i=0; i<not_updated_IDs.size(); i++)
+    {
+        std::cout<<not_updated_IDs[i]<<' ';
+    }
+    std::cout<<std::endl;
+
+    int ID;
+    for (i=0; i<inside_region[0].size(); i++)
+    {
+        ID = inside_region[0][i];
+        current_node = node_list[ID];
+
+        std::cout<<current_node->xyz_coords[0]<<'\t'<<current_node->xyz_coords[1]<<'\t'<<current_node->xyz_coords[2]<<std::endl;
+    }
+
+    
+}
+
 void Grid::saveGrid2File(void)
 {
     FILE * outFile;
@@ -394,12 +546,16 @@ void Grid::saveGrid2File(void)
     {
         node = this->node_list[i];
         lat = node->sph_coords[1]*180./pi;
-        lon = node->sph_coords[2]*180./pi;
+        lon = node->sph_coords[2]*180./pi + 180.0;
+
+        if (lon>359.99) lon = 0.0;
+        if (i<2) lon = 180.0;
         for (j=0; j<node->friend_num; j++)
         {
             f[j] = node->friends_list[j]->ID;
             cx[j] = node->centroids[j][1]*180./pi;
-            cy[j] = node->centroids[j][2]*180./pi;
+            cy[j] = node->centroids[j][2]*180./pi + 180.0;
+            if (cy[j]>359.99) cy[j] =0.0;
         }
         if (node->friend_num == 5) {
             f[5] = -1;

@@ -77,6 +77,27 @@ int main(int argc, char* argv[])
   Node n11(xyz, 11);
   n11.friend_num = 5;
 
+  int subregion0[3]  = {0, 2, 6};
+  int subregion1[3]  = {2, 7, 6};
+  int subregion2[3]  = {2, 8, 7};
+  int subregion3[3]  = {8, 1, 7};
+  int subregion4[3]  = {0, 3, 2};
+  int subregion5[3]  = {3, 8, 2};
+  int subregion6[3]  = {3, 9, 8};
+  int subregion7[3]  = {9, 1, 8};
+  int subregion8[3]  = {0, 4, 3};
+  int subregion9[3]  = {4, 9, 3};
+  int subregion10[3] = {4, 10, 9};
+  int subregion11[3] = {10, 1, 9};
+  int subregion12[3] = {0, 5, 4};
+  int subregion13[3] = {5, 10, 4};
+  int subregion14[3] = {5, 11, 10};
+  int subregion15[3] = {11, 1, 10};
+  int subregion16[3] = {0, 6, 5};
+  int subregion17[3] = {6, 11, 5};
+  int subregion18[3] = {6, 7, 11};
+  int subregion19[3] = {7, 1, 11};
+
   grid = Grid();
 
   grid.addNode(&n0);
@@ -93,6 +114,31 @@ int main(int argc, char* argv[])
   grid.addNode(&n9);
   grid.addNode(&n10);
   grid.addNode(&n11);
+
+  grid.defineRegion(0, 0, subregion0);
+  grid.defineRegion(0, 1, subregion1);
+  grid.defineRegion(0, 2, subregion2);
+  grid.defineRegion(0, 3, subregion3);
+
+  grid.defineRegion(1, 0, subregion4);
+  grid.defineRegion(1, 1, subregion5);
+  grid.defineRegion(1, 2, subregion6);
+  grid.defineRegion(1, 3, subregion7);
+
+  grid.defineRegion(2, 0, subregion8);
+  grid.defineRegion(2, 1, subregion9);
+  grid.defineRegion(2, 2, subregion10);
+  grid.defineRegion(2, 3, subregion11);
+
+  grid.defineRegion(3, 0, subregion12);
+  grid.defineRegion(3, 1, subregion13);
+  grid.defineRegion(3, 2, subregion14);
+  grid.defineRegion(3, 3, subregion15);
+
+  grid.defineRegion(4, 0, subregion16);
+  grid.defineRegion(4, 1, subregion17);
+  grid.defineRegion(4, 2, subregion18);
+  grid.defineRegion(4, 3, subregion19);
 
   grid.findFriends();
 
@@ -113,6 +159,8 @@ int main(int argc, char* argv[])
   grid.orderFriends();
   grid.findCentroids();
   grid.shiftNodes();
+
+  grid.orderNodesByRegion();
 
   std::cout<<std::endl<<"Grid generated. Total node #: "<<grid.node_list.size()<<std::endl;
 
