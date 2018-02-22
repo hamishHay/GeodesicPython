@@ -145,6 +145,19 @@ bool inline isInsideSphericalTriangle(double v1[], double v2[], double v3[], dou
     else return false;
 }
 
+bool inline isOnEdge(double v1[], double v2[], double v[]);
+bool inline isOnEdge(double v1[], double v2[], double v[])
+{
+    double n1[3];
+    int k;
+
+    crossProduct(v1, v2, n1);
+
+    if (fabs(dotProduct(v, n1)) < 1e-8) return true;
+    // if (dotProduct(s1, n1) > -1e-8 && dotProduct(v, n2) > -1e-8 && dotProduct(v, n3) > -1e-8) return true;
+    else return false;
+}
+
 // void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)
 
 #endif

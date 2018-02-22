@@ -16,8 +16,8 @@ ax = fig.add_subplot(111, projection='3d')
 
 # vs = np.array([v4, v5, v6]).T
 
-ax.scatter(vs1[0], vs1[1], vs1[2], c='r')
-ax.scatter(vs2[0], vs2[1], vs2[2], c='b')
+ax.scatter(vs1[0], vs1[1], vs1[2], c='r',s=2.0)
+ax.scatter(vs2[0], vs2[1], vs2[2], c='b', s=0.5)
 # ax.scatter(v[0], v[1], v[2], 'r')
 
 view_lim = 1.
