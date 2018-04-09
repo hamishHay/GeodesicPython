@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib as mpl
-# mpl.use('Agg')
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -17,7 +17,7 @@ nodes = Grid.nodes
 fig = plt.figure(figsize=(12,12))
 ax = Axes3D(fig)
 
-lighting = False
+lighting = True
 cv = True
 
 # data
@@ -131,7 +131,8 @@ for node in nodes:
 
     if cv:
         verts = [list(zip(x, y,z))]
-        ax.add_collection3d(Poly3DCollection(verts, linewidths=0.3, edgecolors=(1*col,1*col,1*col,1.0),facecolor=(col,0,0,1.0)))
+        if f_num == 5: ax.add_collection3d(Poly3DCollection(verts, linewidths=1.4, edgecolors=(1*col,1*col,1*col,1.0),facecolor=(col*0.5,0,0,1.0)))
+        else: ax.add_collection3d(Poly3DCollection(verts, linewidths=1.4, edgecolors=(1*col,1*col,1*col,1.0),facecolor=(col,0,0,1.0)))
 
     # ax.set_aspect('equal')
     #

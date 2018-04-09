@@ -195,7 +195,7 @@ def test_interp(data_file, sl, grid, ll_lat, ll_lon, ll_grid_link, V_inv, r):
     plt.show()
 
 def SaveVandermonde2HDF5(N, dx, node_list, V_inv, cell_pos):
-    f = h5py.File("grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_test.h5", 'w')
+    f = h5py.File("grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + ".h5", 'w')
 
     dset_v_inv = f.create_dataset("vandermonde_inv", (len(node_list),6,6), dtype='f8')
     dset_v_inv[:,:,:] = V_inv[:,:,:]
@@ -307,21 +307,26 @@ for y in range(len(ll_lat)):
                     fl1 = False
                     fl2 = True
                     ID_MASTER_OLD = ID_MASTER
-                    print("POINT DOES NOT LIE INSIDE ANY FRIENDS. SEARCHING FRIEND LVL 2.")
-
-                if fl2 and not fl1 and count >= f_num:
-                    # ID_MASTER = nodes[ID_MASTER_OLD].friends[0]
-                    # ID_C = ID_MASTER
                     count = 0
                     count2 = 0
+                    print("POINT DOES NOT LIE INSIDE ANY FRIENDS. SEARCHING FRIEND LVL 2.")
+
+                #if fl2 and not fl1 and count >= f_num:
+                    # ID_MASTER = nodes[ID_MASTER_OLD].friends[0]
+                    # ID_C = ID_MASTER
+                #    count = 0
+                #    count2 = 0
 
                 if fl2 and not fl1:
                     ID_C = nodes[nodes[ID_MASTER].friends[count2]].friends[count]
+                    # print(nodes[ID_C].lat*180./np.pi, nodes[ID_C].lon*180./np.pi)
 
                     count += 1
                     if count >= f_num:
                         count2 += 1
                         count = 0
+
+                    #if count
 
 
 # test_interp("/home/hamish/Research/GeodesicODIS/DATA_SPH_1/data.h5",
