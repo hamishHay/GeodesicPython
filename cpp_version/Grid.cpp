@@ -278,7 +278,7 @@ void Grid::shiftNodes(void)
         // call find centroid function
     iter = 0;
     this->findCentroids();
-    while ((iter < 3000) && residual > e_converge)//(residual > e_converge)
+    while ((iter < 2000) && residual > e_converge)//(residual > e_converge)
     {
         residual_old = residual;
         residual = 0.0;
@@ -332,16 +332,16 @@ void Grid::shiftNodes(void)
             }
             r = sqrt(r);
 
-            if (node1->friend_num == 6)
-            {
+            //if (node1->friend_num == 6)
+            //{
                 residual += r*r;
                 node1 = this->node_list[i];
                 node1->updateXYZ(xy_new_center);
-            }
+            //}
 
         }
 
-        std::cout<<residual<<std::endl;
+        std::cout<<iter<<'\t'<<residual<<std::endl;
 
         this->findCentroids();
 
@@ -694,6 +694,7 @@ void Grid::saveGrid2File(void)
 
     fprintf(outFile, "%-5s %-12s %-12s %-38s %-20s\n", "ID", "NODE LAT", "NODE LON", "FRIENDS LIST", "CENTROID COORD LIST");
 
+
     for (i=0; i<this->node_list.size(); i++)
     {
         node = this->node_list[i];
@@ -714,7 +715,7 @@ void Grid::saveGrid2File(void)
             cx[j] = -1.0;
             cy[j] = -1.0;
         }
-        fprintf(outFile, "%-5d %12.7f %12.7f { %4d, %4d, %4d, %4d, %4d, %4d}, {( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f), ( % 10.7f, % 10.7f)} \n",
+        fprintf(outFile, "%-5d %12.16f %12.16f { %4d, %4d, %4d, %4d, %4d, %4d}, {( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f)} \n",
                 i, lat, lon, f[0], f[1], f[2], f[3], f[4], f[5],
                 cx[0], cy[0], cx[1], cy[1], cx[2], cy[2], cx[3], cy[3], cx[4], cy[4], cx[5], cy[5]);
     }

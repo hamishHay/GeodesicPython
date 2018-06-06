@@ -66,6 +66,24 @@ class Shape:
             self.lats.append(nodes[i].lat)
             self.lons.append(nodes[i].lon)
 
+    def get_friends_list(self, ID, level=0):
+        def get_node_friends(node):
+            friends_list = []
+            for f in node:
+                friends_list.extend(self.nodes[f].friends)
+            return friends_list
+
+        friends_list = []
+        new_friends = get_node_friends([ID])
+        friends_list.extend(new_friends)
+        for i in range(level+1):
+            new_friends = get_node_friends(friends_list)
+            # print(friends_list)
+            friends_list.extend(new_friends)
+            friends_list = list(set(friends_list))
+
+        return friends_list
+
 # N = int(sys.argv[1])
 
 def read_grid(N):
