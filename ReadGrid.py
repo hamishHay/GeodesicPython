@@ -105,7 +105,7 @@ def read_grid(N):
 
     load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '.txt'
 
-    print("Reading grid from file", load_file)
+    print("\nReading grid from file", load_file)
 
     f = open(load_file,'r')
     lines = f.readlines()
@@ -117,8 +117,12 @@ def read_grid(N):
 
     npole_node = None
 
+    line_count = 0.0
+
     for line in lines[1:]:
         line = line.split()
+
+        line_count += 1.0
 
         ID = int(line[0])
         lat = deg2rad(float(line[1]))
@@ -161,7 +165,17 @@ def read_grid(N):
             except IndexError:
                 pass
 
+        outstring = "\t Percentage complete... {:.1f} %".format(line_count/float(node_num)*100.0)
+
+        sys.stdout.write(outstring)
+        sys.stdout.flush()
+        sys.stdout.write('\r')
+        sys.stdout.flush()
+
+
     f.close()
+
+    print("\n\t Finished!")
 
     GeodGrid = Shape(node_list, N, npole_node)
 

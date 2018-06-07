@@ -38,7 +38,7 @@ def main():
         test_interp(N, Grid, ll_lat, ll_lon, dx, r)
         sys.exit()
 
-    print(dx, "degree resolution lat-lon grid generated. Max spherical harmonic expansion is", len(ll_lat)/2 - 1)
+    print('\n', dx, "degree resolution lat-lon grid generated. Max spherical harmonic expansion is", len(ll_lat)/2 - 1)
 
     ll_node_num = len(ll_lat)*len(ll_lon)   # number of nodes on the lat-lon grid
 
@@ -58,7 +58,7 @@ def main():
         rows_1D.append(ll_count)
         ll_count += 1
 
-
+    print('')
     for y in range(1, len(ll_lat)):
         print("Finding geodesic grid cells intersecting with latitudinal band %3.1f" % np.degrees(ll_lat[y]))
         for x in range(len(ll_lon)):
