@@ -1,3 +1,5 @@
+import matplotlib as mpl
+# mpl.use('Agg')
 import ReadGrid
 import numpy as np
 from numpy import deg2rad
@@ -5,391 +7,492 @@ import h5py
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
-from scipy import interpolate
-import scipy
+from scipy.sparse import csr_matrix
+from shapely.geometry import Polygon
 
-def does_intersect(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y):
-    s1_x = p1_x - p0_x
-    s1_y = p1_y - p0_y
-    s2_x = p3_x - p2_x
-    s2_y = p3_y - p2_y
+def main():
+    N = int(sys.argv[1])        # geodesic grid recursion level
 
-    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y)
-    t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y)
+    dx = float(sys.argv[2])     # lat-lon grid spacing in degrees
+    dx_r = np.radians(dx)
 
-    if (s >= 0 and s <= 1 and t >= 0 and t <= 1):
-        return 1
+    r = 1.0                     # spherical radius
 
-    return 0
+    tolerance = 1.0 - 1e-7
+
+    # Load geodesic grid corresponding to level N
+    Grid = ReadGrid.read_grid(N)
+
+    # Get a list of and number of nodes in the geodesic grid
+    nodes = Grid.nodes
+    gg_node_num = len(nodes)
+
+    # Create lat-lon grid in radians
+    ll_lat = np.radians(np.arange(90, -90, -dx, dtype=np.float))
+    ll_lon = np.radians(np.arange(0, 360, dx, dtype=np.float))
+
+    if (len(ll_lat)%2 != 0):
+        raise ValueError("Lat-lon grid must have an even number of points in latitude, not %d" % len(ll_lat))
+
+    if int(sys.argv[3]):
+        test_interp(N, Grid, ll_lat, ll_lon, dx, r)
+        sys.exit()
+
+    print(dx, "degree resolution lat-lon grid generated. Max spherical harmonic expansion is", len(ll_lat)/2 - 1)
+
+    ll_node_num = len(ll_lat)*len(ll_lon)   # number of nodes on the lat-lon grid
+
+    ID_MASTER = 0   # master cell ID for geodesic grid
+    ll_count = 0    # counter for each lat-lon cell
+
+    # Create 3D array to holding geodesic grid IDs for each lat-lon cell
+    mapping_IDS_1D = []
+    weights_list_1D = []
+    rows_1D = []
+
+    # Handle the north pole cells. Currently they are mapped directly to the
+    # pole cell in the geodesic grid. Maybe there is a better way to handle this?
+    for x in range(len(ll_lon)):
+        mapping_IDS_1D.append(Grid.npole_node.ID)
+        weights_list_1D.append([1.0, 0.0, 0.0])
+        rows_1D.append(ll_count)
+        ll_count += 1
+
+
+    for y in range(1, len(ll_lat)):
+        print("Finding geodesic grid cells intersecting with latitudinal band %3.1f" % np.degrees(ll_lat[y]))
+        for x in range(len(ll_lon)):
+            polygon_to_plot = []        # List of polygons to plot. Used for debugging purposes.
+            does_not_intersect = True   # Switch to indicate when a cell on grid a and b intersect.
+
+            lat1 = ll_lat[y]            # Primary lat-lon of the target grid
+            lon1 = ll_lon[x]            # cell. Used by sph2map projection.
+
+
+            # Define lat-lon cell control volume using the half-way distance
+            # between lat-lon grid points.
+
+            p2_1 = sph2map(lat1, lon1, lat1-dx_r*0.5, lon1-dx_r*0.5, r)
+            p2_2 = sph2map(lat1, lon1, lat1-dx_r*0.5, lon1+dx_r*0.5, r)
+            p2_3 = sph2map(lat1, lon1, lat1+dx_r*0.5, lon1+dx_r*0.5, r)
+            p2_4 = sph2map(lat1, lon1, lat1+dx_r*0.5, lon1-dx_r*0.5, r)
+
+
+            # CREATE POLYGON OUT OF THE LAT-LON GRID POINTS
+            # Note that, this could be a more general algorithm if the control
+            # volume of each grid was a polygon object in the grid object itself.
+            # That way, any shape of polygon can be used in either grid.
+
+            p2=Polygon([(p2_1[0], p2_1[1]),       # This the destination polygon.
+                        (p2_2[0], p2_2[1]),       # In the loops below, we attempt
+                        (p2_3[0], p2_3[1]),       # to find every cell on the original
+                        (p2_4[0], p2_4[1])])      # that intersects with this one.
+
+            polygon_to_plot.append(p2)
+
+            area_ll = p2.area           # Area of the destination grid cell
+            area_gg = 0.0               # Total area of the intersections between
+                                        # parent and target grid.
+
+            count = 0
+            level = 0   # Counter for the level of friends needed to be searched
+                        # i.e., immediate friends, level=0, friends of friends,
+                        # level=1, etc
+
+            # Array for node IDs that will be searched to find if they intersect
+            # with the lat-lon cell.
+            node_list = [ID_MASTER]
+
+            searched = []                   # All cell IDs that have been searched
+            intersect_list = []             # IDs of cells that intersect with p2
+            difference_polygons = []        # Polygons formed from the intersection
+                                            # of p1 and p2.
+            polygons_that_intersect = []    # Polygons (cells) that intersect with p2
+
+            # Search for intersecting cells (p1) until the total area of every
+            # intersection matches the destination cell area (p2), to withtin some
+            # tolerance
+            while (area_gg < area_ll*tolerance):
+                does_not_intersect = True
+
+                # Search over cells in the parent grid (p1) until one is found to
+                # intersect with the destination grid (p2).
+                while (does_not_intersect):
+                    curr_node = Grid.nodes[node_list[count]]
+
+                    f_num = 6
+                    if curr_node.friends[-1] < 0: f_num = 5     # hexagonal cell
+
+                    # Loop over all nodes in the control volume to create vertices
+                    # of the polygon. Could probably vectorize this step?
+                    p1 = []
+                    for i in range(f_num):
+                        c1_lat, c1_lon = curr_node.centroids[i%f_num]
+                        c2_lat, c2_lon = curr_node.centroids[(i+1)%f_num]
+
+                        e1_x, e1_y = sph2map(lat1, lon1, c1_lat, c1_lon, r)
+                        e2_x, e2_y = sph2map(lat1, lon1, c2_lat, c2_lon, r)
+
+                        p1.append( (e1_x, e1_y) )
+
+                    # Create the polygon object out of the control volume vertices
+                    p1 = Polygon(p1)
+
+                    # Check if the two cells intersect
+                    if (p1.intersects(p2)):
+                        # Update master node ID
+                        ID_MASTER = node_list[count]
+
+                        # Indicate that intersection has occured
+                        does_not_intersect = False
+
+                        # Indicate that this node has already been searched
+                        searched.append(curr_node.ID)
+
+                        # Store the ID of this node in the intersection list
+                        intersect_list.append(curr_node.ID)
+
+                        # Store relevant row in the lat-lon vector
+                        rows_1D.append(ll_count)
+
+                        # Store the polygon created by the intersection of p1
+                        # and p2
+                        difference_polygons.append(p1.intersection(p2))
+
+                        # Add the area of this interesction polygon to the area
+                        # sum, and store the intersecting (geodesic) polygon
+                        poly_area = difference_polygons[-1].area
+                        area_gg += poly_area
+
+                        polygons_that_intersect.append(p1)
+
+                        # Reset the counter, remove search cells from the node_list,
+                        # and update the node_list if it is empty
+                        count = 0
+                        node_list = [node for node in node_list if node not in intersect_list]
+                        node_list = [node for node in node_list if node not in searched]
+                        node_list = [node for node in node_list if node >= 0]
+
+                        while (len(node_list) == 0):
+                            node_list = Grid.get_friends_list(ID_MASTER, level=level)
+                            node_list = [node for node in node_list if node not in searched]
+                            node_list = [node for node in node_list if node >= 0]
+                            level+=1
+
+                    # p1 does not intersect with p2, so we must move onto the next
+                    # cell
+                    else:
+                        # Store the fact that the current cell has been searched to
+                        # prevent searching over the same cell twice
+                        searched.append(curr_node.ID)
+                        count += 1
+
+                        # If we have searched all nodes that exist in the current
+                        # list, we must extend to the next set of neighbouring
+                        # cells around the MASTER node.
+                        if count >= len(node_list)-1:
+                            count = 0
+
+                            # Get next level of neighbouring cell IDs
+                            node_list = Grid.get_friends_list(ID_MASTER, level=level)
+
+                            # Remove cells that have already been searched
+                            node_list = [node for node in node_list if node not in searched]
+                            level += 1
+
+            ll_count += 1
+
+            # if ll_lat[y] < np.radians(30.):
+            #     for polygon in polygon_to_plot:
+            #         xp, yp = polygon.exterior.xy
+            #         # print(xp, yp)
+            #         plt.plot(xp,yp)
+            #     plt.show()
+
+            # All intersecting cells for latlon[x][y] have now been found.
+            # Next we assign the starting parent cell ID for the next search,
+            # and compute all weighting coefficients for currrent lat-lon cell
+            # (p2)
+
+            # Set parent cell ID for next search using the cell that intersects
+            # the most with lat-lon cell (p2)
+            ID_MASTER = intersect_list[np.argmax(poly_area)]
+
+            # Add all intersecting parent cell ID's to a master list of cell
+            # intersections
+            mapping_IDS_1D.extend(intersect_list)
+
+            # Get mapping weights from all relvant polygons
+            weights_list = get_interpolation_weights(lat1, lon1, p2, difference_polygons, polygons_that_intersect, r)
+            weights_list_1D.extend(weights_list)
+
+
+    # All intersecting cells have been found for every cell in the destination
+    # grid. All weighting coefficients have also been calculated. Now we
+    # construct a sparse matrix in CSR format, and save that matrix and its
+    # column/row indexes to an hdf5 file.
+
+    # Create 1d arrays for the column, row indexes, and data to convert
+    # weightings to csr matrix format
+    cols = []
+    rows = []
+    data = []
+    for i in range(len(weights_list_1D)):
+        cols.append(3*mapping_IDS_1D[i]    )
+        cols.append(3*mapping_IDS_1D[i] + 1)
+        cols.append(3*mapping_IDS_1D[i] + 2)
+
+        rows.append(rows_1D[i])
+        rows.append(rows_1D[i])
+        rows.append(rows_1D[i])
+
+        data.append(weights_list_1D[i][0])
+        data.append(weights_list_1D[i][1])
+        data.append(weights_list_1D[i][2])
+
+    cols = np.array(cols, dtype=np.int)
+    rows = np.array(rows, dtype=np.int)
+    data = np.array(data, dtype=np.double)
+
+    # Create sparse interpolating matrix
+    sparse_mapping_matrix = csr_matrix((data, (rows, cols)), shape=(len(ll_lat)*len(ll_lon), 3*len(Grid.nodes)))
+    sparse_mapping_matrix.eliminate_zeros()
+
+    indices = sparse_mapping_matrix.indices     # column indexes
+    indptr  = sparse_mapping_matrix.indptr      # row indexes
+    data    = sparse_mapping_matrix.data        # non-zero data array
+
+    print("Mapping matrix shape:", sparse_mapping_matrix.shape)
+    print("Mapping matrix non-zero elements:", len(data))
+    print("Mapping matrix sparsity:", len(data)/(sparse_mapping_matrix.shape[0]*sparse_mapping_matrix.shape[1]))
+
+    SaveWeightingMatrix(N, dx, indices, indptr, data)
+
+
+
+
+def get_interpolation_weights(lat1, lon1, polygon_primary, intersection_polygons, gg_polygons, r):
+    """
+    Function to find the interpolation weights for a cell (primary_polygon), given
+    all the cells that intersect it (gg_polygons) and the polygons generated by
+    the intersection of primary_polygon and gg_polygons (intersection_polygons).
+    """
+
+    area_primary = polygon_primary.area
+    intersect_no = len(intersection_polygons)
+
+    weights = [[0., 0., 0.,] for i in range(intersect_no)]
+
+    # The following functions represent the integrands of equations 12 - 14 in
+    # Jones (1998). The first integrand is used for 1st order accurate conservative
+    # mapping, while the second and third are used for 2nd order accurate
+    # conservative mapping.
+
+    def weight1_integrand(lats, lons):
+        return -np.sin(lats)
+
+    def weight2_integrand(lats, lons):
+        return -np.cos(lats) - lats*np.sin(lats)
+
+    def weight3_integrand(lats, lons):
+        return -0.5*lons*(np.sin(lats)*np.cos(lats) + lats)
+
+    # Loop over every polygon that intersects with polygon_primary and evaluate
+    # the three weighting coefficients for each one.
+    for i in range(intersect_no):
+        # Calculate weight one
+        integral = line_integral(intersection_polygons[i], weight1_integrand, lat1, lon1, r)
+        weights[i][0] = integral/area_primary
+
+
+        # Calculate weight two
+        integral = line_integral(intersection_polygons[i], weight2_integrand, lat1, lon1, r)
+        weights[i][1] = integral/area_primary
+
+        integral = line_integral(gg_polygons[i], weight2_integrand, lat1, lon1, r)
+        weights[i][1] -= weights[i][0]/gg_polygons[i].area * integral
+
+
+        # Calculate weight three
+        integral = line_integral(intersection_polygons[i], weight3_integrand, lat1, lon1, r)
+        weights[i][2] = integral/area_primary
+
+        integral = line_integral(gg_polygons[i], weight3_integrand, lat1, lon1, r)
+        weights[i][2] -= weights[i][0]/gg_polygons[i].area * integral
+
+    return weights
+
+
+
+
+def line_integral(polygon, integrand_function, lat1, lon1, r):
+    """
+    Function to perfrom a line integral around a the edge of polygon, using
+    some perscribed function of latitude and longitude: integrand_function.
+    """
+
+    xp, yp = polygon.exterior.xy
+    integral = 0.0
+    n = 150
+    for j in range(len(xp)-1):
+        xs = np.linspace(xp[j], xp[j+1], n)
+        ys = np.linspace(yp[j], yp[j+1], n)
+
+        lats, lons, sinLats = map2sph(lat1, lon1, xs, ys, r, trig=True)
+
+        lons_norm = lons - lon1
+
+        integrand = integrand_function(lats, lons_norm)
+
+        integral += -np.trapz(integrand, lons)
+
+    return integral
+
+
+
 
 def sph2map(lat1,lon1,lat2,lon2, r):
+    """
+    Find the projected xy coordinates of the point latlon2 around latlon1 using
+    a stereographic projection. The inverse of this function is map2sph.
+    """
+
     m = 2.0 / (1.0 + np.sin(lat2)*np.sin(lat1) + np.cos(lat1)*np.cos(lat2)*np.cos(lon2-lon1))
     x = m * r * np.cos(lat2) * np.sin(lon2 - lon1)
     y = m * r * (np.sin(lat2)*np.cos(lat1) - np.cos(lat2)*np.sin(lat1)*np.cos(lon2-lon1))
 
-    if abs(x) < 1e-6: x = 0.0
-    if abs(y) < 1e-6: y = 0.0
-
     return np.array([x, y])
 
-def distanceBetween(x1,y1,x2,y2):
-    return np.sqrt((x2-x1)**2 + (y2-y1)**2)
-
-def getVandermondeMatrix(node_list, node_ID, r, inv=False):
-    f_num = 6
-    node = node_list[node_ID]
-    if node.friends[-1] < 0:
-        f_num = 5
-
-    V = np.ones((6,6), dtype=np.float64)
 
 
 
-    lat1 = node.lat
-    lon1 = node.lon
+def map2sph(lat1, lon1, x, y, r, trig=False):
+    """
+    Find the latlon coordinates from the projected coordinates xy about the point
+    latlon1 using a stereographic projection. This function is the inverse of
+    sph2map.
+    """
 
-    rot = np.radians(10.)
-    # while True:
-    #     R = np.array([[np.cos(rot), -np.sin(rot)],
-    #                   [np.sin(rot), np.cos(rot)]])
-    for i in range(f_num):
-        f1_ID = node.friends[i]
+    rho = np.sqrt(x**2. + y**2.)
+    c = 2. *np.arctan2(rho, 2.*r)
 
-        f1 = node_list[f1_ID]
+    sinLat = np.cos(c)*np.sin(lat1) + y*np.sin(c)*np.cos(lat1)/rho
+    lat = np.arcsin(sinLat)
 
-        lat2 = f1.lat
-        lon2 = f1.lon
-
-        x, y = sph2map(lat1, lon1, lat2, lon2, r)
-
-        # print(x, y)
-
-        # (x, y) = np.dot(R, np.array([x, y]))
-
-        # print(x, y)
-
-        V[i,0] = 1.0
-        V[i,1] = x
-        V[i,2] = (x**2.0)
-        V[i,3] = y
-        V[i,4] = x*y
-        V[i,5] = y**2.0
+    lon = lon1 + np.arctan2(x*np.sin(c), (rho*np.cos(lat1)*np.cos(c) - y*np.sin(lat1)*np.sin(c)))
+    if not trig:
+        return np.array([lat, lon])
+    else:
+        return np.array([lat, lon, sinLat])
 
 
-        # print(np.linalg.det(V))
-        # print(np.linalg.inv(V))
-        #
-        # if np.linalg.det(V) == 0.0:
-        #     print("GOING UP")
-        #     rot += np.radians(0.1)
-        #     # sys.exit()
-        # else:
-        #     break
-
-    if f_num == 5:
-        V[-1,1:] = 0.0
-
-    U, L, VT = np.linalg.svd(V)
-
-    V2 = V.copy()
-    V = VT.T
-    UT = U.T
-
-    L_inv = np.diag(1.0/L)
-
-    # if L_inv[-1,-1] > 1e5:
-    #     L_inv[-1,-1] = 0.0
 
 
-    L_inv[abs(L_inv) > 2e1] = 0.0
+def test_interp(N, grid, ll_lat, ll_lon, dx, r):
+    """
+    Test the interpolation of geodesic grid N to latlon resolution dx. Returns
+    the max and mean error of the interpolation.
+    """
 
-    A_inv = np.linalg.multi_dot([V, L_inv, UT]) #V.dot(L_inv).dot(U)
-    #
-    # try:
-    #     V_inv = np.linalg.inv(V2)
-    # except np.linalg.linalg.LinAlgError:
-    #
-    #     print("Vandermonde matrix invertible!!!")
-    #     # print(V2)
-    #     # print(np.linalg.det(V2))
-    #     # print(np.dot(scipy.linalg.pinv(V2), V2))
-    #     # print(np.dot(np.linalg.pinv(V2), V2))
-    #     # print(np.dot(scipy.linalg.pinv2(V2), V2))
-    #     sys.exit()
+    file_name = "grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_weights.h5"
 
-    if inv:
-        return A_inv, 0.0 #np.linalg.pinv(V2, rcond=1e-4), 0.0
-        # return V_inv, rot
+    f= h5py.File(file_name, 'r')
 
-    return V
+    cols = f["column index"]
+    rows = f["row index"]
+    w    = f["weights"]
 
-def test_interp(data_file, sl, grid, ll_lat, ll_lon, ll_grid_link, V_inv, Rot, r):
-    data = h5py.File(data_file, 'r')
+    map_matrix = csr_matrix((w, cols, rows), shape=(len(ll_lat)*len(ll_lon), 3*len(grid.nodes)))
 
-    n_field = np.array(data["displacement"][sl])
+    m = 2.
+    n = 1.
 
+    ll_x, ll_y = np.meshgrid(ll_lon, ll_lat)
 
-    gg_lat = np.array(grid.lats)
-    gg_lon = np.array(grid.lons)
+    tf_ll = np.cos(m*ll_x) * np.cos(n*ll_y)**4.
 
-    # n_field = 1000 * np.cos(2*gg_lat)**2 * np.sin(6*gg_lon)
+    gg_lat, gg_lon = np.array(grid.lats), np.array(grid.lons)
     triang = tri.Triangulation(gg_lon, gg_lat)
 
-    levels = np.linspace(-30, 30, 11)
+    tf_gg = np.cos(m*gg_lon) * np.cos(n*gg_lat)**4.
+    tf_gg_dlat = 1./r * (-4.*n*np.sin(n*gg_lat)*np.cos(n*gg_lat)**3. *np.cos(m*gg_lon))
+    tf_gg_dlon = 1./r * (-m*np.sin(m*gg_lon)*np.cos(n*gg_lat)**4.)/np.cos(gg_lat)
 
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1,ncols=3,figsize=(12,3),dpi=120)
-    tcnt = ax1.tricontourf(triang, n_field, levels=levels, cmap = plt.cm.coolwarm)
-    cb = plt.colorbar(tcnt, ax=ax1, orientation='horizontal')
-    ax1.set_title("ODIS DATA")
+    gg_data = np.zeros(3*len(grid.nodes))
+    ll_interp = np.zeros(len(ll_lat)*len(ll_lon))
 
-    nodes = grid.nodes
+    for i in range(len(grid.nodes)):
+        gg_data[3*i]        = tf_gg[i]
+        gg_data[3*i + 1]    = tf_gg_dlat[i]
+        gg_data[3*i + 2]    = tf_gg_dlon[i]
 
-    data_interp = np.zeros((len(ll_lon), len(ll_lat)))
-    for i in range(len(ll_lon)):
-        for j in range(len(ll_lat)):
-            # SET DATA VECTOR
-            d = np.zeros((6,1))
+    ll_interp = map_matrix.dot(gg_data)
+    ll_interp = np.reshape(ll_interp, (len(ll_lat), len(ll_lon)))
 
-            cell_ID = ll_grid_link[i,j]
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(ncols=4, figsize=(16,3.5))
 
-            f_num = 6
-            if nodes[cell_ID].friends[-1] < 0:
-                f_num = 5
-                d[-1,0] = n_field[cell_ID]
+    vmax = max(np.amax(ll_interp), max(np.amax(tf_ll), np.amax(tf_gg)))
+    vmin = min(np.amin(ll_interp), min(np.amin(tf_ll), np.amin(tf_gg)))
 
-            # SET DATA VECTOR FROM IMPORTED NUMERICAL FIELD
-            for k in range(f_num):
-                f_ID = nodes[cell_ID].friends[k]
-                d[k,0] = n_field[f_ID]
+    levels = np.linspace(vmin, vmax, 9)
+    levels2 = 1e3*np.linspace(np.amin(ll_interp-tf_ll), np.amax(ll_interp-tf_ll), 9)
 
-            # FIND LAT-LON GRID MAPPING COORDS
-            lat1 = nodes[cell_ID].lat
-            lon1 = nodes[cell_ID].lon
+    axes = [ax1, ax2, ax3, ax4]
 
-            lat2 = ll_lat[j]
-            lon2 = ll_lon[i]
+    c1 = ax1.contourf(ll_lon, ll_lat, tf_ll, levels=levels)
+    c2 = ax2.tricontourf(triang, tf_gg, levels=levels)
+    c3 = ax3.contourf(ll_lon, ll_lat, ll_interp, levels=levels)
+    c4 = ax4.contourf(ll_lon, ll_lat, 1e3*(ll_interp-tf_ll))
 
-            x, y = sph2map(lat1, lon1, lat2, lon2, r)
-            R = np.array([[np.cos(Rot[cell_ID]), -np.sin(Rot[cell_ID])],
-                          [np.sin(Rot[cell_ID]), np.cos(Rot[cell_ID])]])
+    c = [c1, c2, c3, c4]
 
-            (x, y) = np.dot(R, np.array([x, y]))
+    for cb, ax in zip(c,axes):
+        ax.set_ylim([-np.pi*0.5, np.pi*0.5])
+        ax.set_aspect('equal')
+        plt.colorbar(cb, ax=ax, orientation='horizontal')
 
-            # SET INVERSE VANDERMONDE MATRIX
-            VAND_INV = V_inv[cell_ID]
+    max_err = np.amax(abs(ll_interp-tf_ll))
+    mean_err = np.mean(abs(ll_interp.flatten()-tf_ll.flatten()))
 
-            # print(VAND_INV)
+    print("Max error:", max_err, ", Mean error:", mean_err)
 
-            # CALCULATE C COEFFS
-            c = VAND_INV.dot(d)
-            c = c[:, 0]
-            # print(c)
+    ax1.set_title("Lat-lon grid (analytic)")
+    ax2.set_title("Geodesic grid (analytic)")
+    ax3.set_title("Interpolated solution")
+    ax4.set_title("Interpolated - analytic solution ($\\times 10^3$)")
 
-
-            # EXPAND FUNCTION TO FIND INTERPOLATED DATA
-            data_interp[i,j] = c[0] + c[1]*x + c[2]*x**2.0 + c[3]*y + c[4]*y*x + c[5]*y**2.0
-
-
-    data_interp = data_interp.T
-
-    tcnt2 = ax2.contourf(ll_lon, ll_lat, data_interp, levels=levels, cmap = plt.cm.coolwarm)
-    # tcnt2 = ax2.contour(ll_lon, ll_lat, data_interp, levels=levels, linewidths=0.5)
-    cb2 = plt.colorbar(tcnt2, ax=ax2, orientation='horizontal', label="Pressure [kPa]")
-    ax2.set_title("My interpolation")
-
-    gg_lat = np.pi*0.5 - gg_lat
-    knotst, knotsp = gg_lat.copy(), gg_lon.copy()
-
-    f = interpolate.SmoothSphereBivariateSpline(gg_lat, gg_lon, n_field/np.amax(n_field), s=0.1)
-
-    data_interp2 = f(np.pi*0.5- ll_lat, ll_lon) * np.amax(n_field)
-    tcnt3 = ax3.contourf(ll_lon, ll_lat, data_interp2-data_interp, cmap = plt.cm.coolwarm)
-    cb3 = plt.colorbar(tcnt3, ax=ax3, orientation='horizontal')
-    ax3.set_title("Difference")
-
-    n_field /= 1e3
-    print("DATA INFO: MAX:", np.amax(n_field), "MIN:", np.amin(n_field))
-    print("INTP INFO: MAX:", np.amax(data_interp), "MIN:", np.amin(data_interp),
-          "%:", (np.amax(n_field)-np.amax(data_interp))/np.amax(n_field)*100,
-          (np.amin(n_field)-np.amin(data_interp))/np.amin(n_field)*100)
-    print("INTP2 INFO: MAX:", np.amax(data_interp2), "MIN:", np.amin(data_interp2))
-
+    # fig.savefig("/home/hamish/Dropbox/conservative_interp_test_g6_1x1.pdf")
     plt.show()
 
-def SaveVandermonde2HDF5(N, dx, node_list, V_inv, Rotation, cell_pos):
-    f = h5py.File("grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_test.h5", 'w')
-
-    dset_v_inv = f.create_dataset("vandermonde_inv", (len(node_list),6,6), dtype='f8')
-    dset_v_inv[:,:,:] = V_inv[:,:,:]
-
-    dset_rot = f.create_dataset("rotation", (len(node_list),), dtype='f8')
-    dset_rot[:] = Rotation[:]
-
-    dset_cell_ID = f.create_dataset("cell_ID", (int(180/dx),int(360/dx)), dtype='i')
-    dset_cell_ID[:,:] = cell_pos[:,:].T
-
-N = int(sys.argv[1])
-
-r = 1.0 #252.1e3
-
-dx = 4.0 # lat-lon grid spacing in degrees
-
-Grid = ReadGrid.read_grid(N)
-
-# GET NODES LIST
-nodes = Grid.nodes
-
-# CREATE LAT-LON GRID
-ll_lat = np.arange(90, -90, -dx, dtype=np.float)
-ll_lon = np.arange(0, 360, dx, dtype=np.float)
-
-# CONVERT TO RADIANS
-ll_lat = np.deg2rad(ll_lat)
-ll_lon = np.deg2rad(ll_lon)
-
-# CREATE 2D ARRAY FOR CELL ID'S IN THE LAT-LON GRID
-gd2ll_ID = np.zeros((len(ll_lon), len(ll_lat)), dtype=np.int)
-
-# ASSIGN POLAR CELL ID
-gd2ll_ID[0, 0] = Grid.npole_node.ID
-
-lat1 = Grid.npole_node.lat
-lon1 = Grid.npole_node.lon
-
-f_num = 6
-ID_C = gd2ll_ID[0, 0]
-ID_MASTER = ID_C
-
-v_max = 0.0
-V_inv = np.zeros((len(nodes),6,6))
-Rotation = np.zeros(len(nodes))
-for y in range(len(ll_lat)):
-    for x in range(len(ll_lon)):
-
-        lat2 = ll_lat[y]
-        lon2 = ll_lon[x]
-
-        # print("FINDING GEODESIC CELL ID FOR POS", np.degrees(lat2), np.degrees(lon2))
-
-        cent_dist = np.ones(6, dtype=np.float)*10.0
-        friend_nums = np.ones(6, dtype=np.int)*-1
-
-        fl1 = False
-        fl2 = False
-        fl3 = False
-
-        count = 0
-        cn = 0
-        while (cn%2 == 0):
-
-            lat1 = nodes[ID_MASTER].lat
-            lon1 = nodes[ID_MASTER].lon
-
-            p1_x, p1_y = sph2map(lat1, lon1, lat2, lon2, r)
-            p2_x = p1_x
-            p2_x += r*np.deg2rad(5.0)
-            p2_y = p1_y
-
-            # print("SEARCHING NODE ID", ID_C)
-
-            cn = 0
-            if nodes[ID_C].friends[-1] < 0:
-                f_num = 5
-            else:
-                f_num = 6
-
-            friend_nums[count] = ID_C
-            cent2interp_distance = 10.0
-            for i in range(f_num):
-                c1_lat, c1_lon = nodes[ID_C].centroids[i%f_num]
-                c2_lat, c2_lon = nodes[ID_C].centroids[(i+1)%f_num]
-
-                e1_x, e1_y = sph2map(lat1, lon1, c1_lat, c1_lon, r)
-                e2_x, e2_y = sph2map(lat1, lon1, c2_lat, c2_lon, r)
-
-                cn += does_intersect(p1_x, p1_y, p2_x, p2_y, e1_x, e1_y, e2_x, e2_y)
+    return max_err, mean_err
 
 
-            if cn%2 == 1:
-                print("POINT LIES INSIDE THE POLYGON", ID_C, ", MOVE ON\n")
-                gd2ll_ID[x, y] = ID_C
-                ID_MASTER = ID_C
-
-                V_inv[ID_C], Rotation[ID_C] = getVandermondeMatrix(nodes, ID_C, r, inv=True)
-                # print(rot)
-
-                print(np.degrees(lat1), np.degrees(lon1), np.degrees(lat2), np.degrees(lon2))
-
-                v_max = max(v_max, np.amax(V_inv[ID_C]))
-                # print("V MAX:", v_max)
 
 
-            else:
-                # if fl3:
-                #     ID_MASTER += 1
-                #     ID_C += 1
+def SaveWeightingMatrix(N, dx, cols, rows, data):
+    """
+    Save the weighting coefficients (data) to an hdf5 file. Cols and rows are
+    the row and column indices, in csr format, and are also saved.
+    """
+
+    file_name = "grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_weights.h5"
+    print("Saving mapping matrix in CSR format to " + file_name)
+
+    f = h5py.File(file_name, 'w')
+
+    dset_cols = f.create_dataset("column index", (len(cols), ), dtype='i')
+    dset_cols[:] = cols[:]
+
+    dset_rows = f.create_dataset("row index", (len(rows), ), dtype='i')
+    dset_rows[:] = rows[:]
+
+    dset_data = f.create_dataset("weights", (len(data), ), dtype='d')
+    dset_data[:] = data[:]
+
+    dset_data.attrs["non-zero elements"] = len(data)
+
+    f.close()
 
 
-                if not fl1 and not fl2:
-                    fl1 = True
-                    print("POINT DOES NOT LIE INSIDE THE POLYGON. SEARCHING FRIEND LVL 1.")
-
-                if fl1 and not fl2:
-                    ID_C = nodes[ID_MASTER].friends[count]
-                    count += 1
-
-                if count >= f_num and fl1 and not fl2:
-                    fl1 = False
-                    fl2 = True
-                    ID_MASTER_OLD = ID_MASTER
-                    count = 0
-                    count2 = 0
-                    print("POINT DOES NOT LIE INSIDE ANY FRIENDS. SEARCHING FRIEND LVL 2.")
-
-                #if fl2 and not fl1 and count >= f_num:
-                    # ID_MASTER = nodes[ID_MASTER_OLD].friends[0]
-                    # ID_C = ID_MASTER
-                #    count = 0
-                #    count2 = 0
-
-                if fl2 and not fl1:
-
-                    try:
-                        ID_C = nodes[nodes[ID_MASTER].friends[count2]].friends[count]
-                        # print(nodes[ID_C].lat*180./np.pi, nodes[ID_C].lon*180./np.pi)
-
-                        count += 1
-                        if count >= f_num:
-                            count2 += 1
-                            count = 0
-                    except:
-                        fl3 = True
-                        # fl1 = False
-                        # fl2 = False
-
-                        # ID_C = 0
-                        # ID_MASTER = 0
-
-
-                    #if count
-
-
-test_interp("/home/hamish/Research/GeodesicODISBeta/GeodesicODIS/DATA/data.h5",
-            99,
-            Grid,
-            ll_lat,
-            ll_lon,
-            gd2ll_ID,
-            V_inv,
-            Rotation,
-            r)
-
-SaveVandermonde2HDF5(N, dx, nodes, V_inv, Rotation, gd2ll_ID)
-
-# t = np.ones(6)
-# for i in range(len(ll_lat)):
-#     for j in range(len(ll_lon)):
-#
-#         print(V_inv[gd2ll_ID[j][i]].dot(t))
-#         print(V_inv[gd2ll_ID[j][i]])
-#         a = input()
+if __name__=='__main__':
+    main()

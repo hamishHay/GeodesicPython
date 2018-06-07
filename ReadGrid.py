@@ -10,8 +10,6 @@ class Node:
         self.lat = lat
         self.lon = lon
 
-        # print(lat, lon)
-
         self.coords_cart = self.sph2cart(np.pi*0.5 - lat, lon)
         self.x = self.coords_cart[0]
         self.y = self.coords_cart[1]
@@ -30,6 +28,23 @@ class Node:
     def add_centroid(self, lat, lon):
         self.centroids.append(np.array([lat, lon]))
         self.centroids_cart.append(self.sph2cart(np.pi*0.5 - lat, lon))
+
+    def create_polygon(self):
+        f_num = 6
+        centroids = self.centroids[:]
+        if self.friends[-1] == -1:
+            f_num = 5
+            centroids = self.centroids[:-1]
+
+        c_lats = []
+        c_lons = []
+        for i in range(f_num+1):
+            c1_lat, c1_lon = np.degrees(self.centroids[i%f_num])
+
+            c_lats.append(c1_lat)
+            c_lons.append(c1_lon)
+
+        self.polygon = SphericalPolygon.from_radec(c_lons, c_lats)
 
     def sph2map(self,lat1,lon1,lat2,lon2):
         m = 2.0 * (1.0 + np.sin(lat2)*np.sin(lat1) + np.cos(lat1)*np.cos(lat2)*np.cos(lon2-lon1))
@@ -75,23 +90,22 @@ class Shape:
 
         friends_list = []
         new_friends = get_node_friends([ID])
+        if new_friends[-1] == -1:
+            new_friends = new_friends[:-1]
+
         friends_list.extend(new_friends)
         for i in range(level+1):
             new_friends = get_node_friends(friends_list)
-            # print(friends_list)
             friends_list.extend(new_friends)
             friends_list = list(set(friends_list))
 
         return friends_list
 
-# N = int(sys.argv[1])
-
 def read_grid(N):
 
-    #load_file = '/home/hamish/Research/GeodesicODIS/input_files/grid_l' + str(N) + '.txt'
-    #load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '_ordered.txt'
     load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '.txt'
 
+    print("Reading grid from file", load_file)
 
     f = open(load_file,'r')
     lines = f.readlines()
