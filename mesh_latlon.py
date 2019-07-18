@@ -1,5 +1,5 @@
 import matplotlib as mpl
-# mpl.use('Agg')
+mpl.use('Agg')
 import ReadGrid
 import numpy as np
 from numpy import deg2rad
@@ -42,7 +42,7 @@ def main():
 
     ll_node_num = len(ll_lat)*len(ll_lon)   # number of nodes on the lat-lon grid
 
-    ID_MASTER = 0   # master cell ID for geodesic grid
+    ID_MASTER = nodes[-1].ID   # master cell ID for geodesic grid
     ll_count = 0    # counter for each lat-lon cell
 
     # Create 3D array to holding geodesic grid IDs for each lat-lon cell
@@ -53,7 +53,7 @@ def main():
     # Handle the north pole cells. Currently they are mapped directly to the
     # pole cell in the geodesic grid. Maybe there is a better way to handle this?
     for x in range(len(ll_lon)):
-        mapping_IDS_1D.append(Grid.npole_node.ID)
+        mapping_IDS_1D.append(nodes[-1].ID)#Grid.npole_node.ID)
         weights_list_1D.append([1.0, 0.0, 0.0])
         rows_1D.append(ll_count)
         ll_count += 1
@@ -262,6 +262,8 @@ def main():
     indptr  = sparse_mapping_matrix.indptr      # row indexes
     data    = sparse_mapping_matrix.data        # non-zero data array
 
+    print(sparse_mapping_matrix)
+
     print("Mapping matrix shape:", sparse_mapping_matrix.shape)
     print("Mapping matrix non-zero elements:", len(data))
     print("Mapping matrix sparsity:", len(data)/(sparse_mapping_matrix.shape[0]*sparse_mapping_matrix.shape[1]))
@@ -405,18 +407,18 @@ def test_interp(N, grid, ll_lat, ll_lon, dx, r):
     map_matrix = csr_matrix((w, cols, rows), shape=(len(ll_lat)*len(ll_lon), 3*len(grid.nodes)))
 
     m = 2.
-    n = 1.
+    n = 3.
 
     ll_x, ll_y = np.meshgrid(ll_lon, ll_lat)
 
-    tf_ll = np.cos(m*ll_x) * np.cos(n*ll_y)**4.
+    tf_ll = np.cos(m*ll_x) * np.cos(n*ll_y)**4. #+ 0.001*np.cos(3*m*ll_x) * np.cos(3*n*ll_y)
 
     gg_lat, gg_lon = np.array(grid.lats), np.array(grid.lons)
     triang = tri.Triangulation(gg_lon, gg_lat)
 
-    tf_gg = np.cos(m*gg_lon) * np.cos(n*gg_lat)**4.
-    tf_gg_dlat = 1./r * (-4.*n*np.sin(n*gg_lat)*np.cos(n*gg_lat)**3. *np.cos(m*gg_lon))
-    tf_gg_dlon = 1./r * (-m*np.sin(m*gg_lon)*np.cos(n*gg_lat)**4.)/np.cos(gg_lat)
+    tf_gg = np.cos(m*gg_lon) * np.cos(n*gg_lat)**4. #+ 0.001*np.cos(3*m*gg_lon) * np.cos(3*n*gg_lat)
+    tf_gg_dlat = 1./r * (-4.*n*np.sin(n*gg_lat)*np.cos(n*gg_lat)**3. *np.cos(m*gg_lon)) #+ -3.*n*0.001*np.cos(3*m*gg_lon) * np.sin(3*n*gg_lat))
+    tf_gg_dlon = 1./r * (-m*np.sin(m*gg_lon)*np.cos(n*gg_lat)**4. )/np.cos(gg_lat) #- 3.*m* 0.001*np.sin(3*m*gg_lon) * np.cos(3*n*gg_lat)
 
     gg_data = np.zeros(3*len(grid.nodes))
     ll_interp = np.zeros(len(ll_lat)*len(ll_lon))
@@ -438,6 +440,10 @@ def test_interp(N, grid, ll_lat, ll_lon, dx, r):
     levels2 = 1e3*np.linspace(np.amin(ll_interp-tf_ll), np.amax(ll_interp-tf_ll), 9)
 
     axes = [ax1, ax2, ax3, ax4]
+
+    # tf_ll2 = np.cos(m*ll_x) * np.cos(n*ll_y)**4.
+
+    # tf_ll = np.cos(m*ll_x) * np.cos(n*ll_y)**4.
 
     c1 = ax1.contourf(ll_lon, ll_lat, tf_ll, levels=levels)
     c2 = ax2.tricontourf(triang, tf_gg, levels=levels)
@@ -461,7 +467,7 @@ def test_interp(N, grid, ll_lat, ll_lon, dx, r):
     ax3.set_title("Interpolated solution")
     ax4.set_title("Interpolated - analytic solution ($\\times 10^3$)")
 
-    # fig.savefig("/home/hamish/Dropbox/conservative_interp_test_g6_1x1.pdf")
+    fig.savefig("/home/hamish/Dropbox/Tests/conservative_interp_test_g6_1x1.pdf")
     plt.show()
 
     return max_err, mean_err

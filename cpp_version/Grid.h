@@ -38,6 +38,12 @@ public:
 
   void orderNodesByRegion(void);
 
+  void applyBoundary(void);
+
+  void refineBoundary(void);
+
+  void twistGrid(void);
+
   void saveGrid2File(void);
 };
 

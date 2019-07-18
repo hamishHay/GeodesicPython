@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <stdio.h>
+#include <string>
 
 struct AngleSort{
   double ang;
@@ -43,7 +44,7 @@ void Grid::findFriends(void)
             {
                 nodeB = this->node_list[j];
 
-                dist = (*nodeA - *nodeB).getMagnitude();
+                dist = (*nodeA - *nodeB).getMagnitude();    // TODO - does this create a new node?
 
                 // std::cout<<dist<<std::endl;
 
@@ -222,28 +223,462 @@ void Grid::orderFriends(void)
       //Order the friends of the new guys
       // double v1[2], v2[2];
       node = node_list[i];
-
-      std::vector<AngleSort> ordered_friends(node->friend_num);
-
-
-      for (j=0; j<node->friend_num; j++)
+      if (node->boundary >= 0)
       {
-        node_friend = node->friends_list[j];
-        node_friend->getMapCoords(*node, v2);
+        int friend_num = node->friend_num;
+        for (j=0; j<node->friend_num; j++)
+        {
+          if (node->friends_list[j]->boundary < 0) {
+              friend_num--;
+              node->friends_list[j]->ID = -2;
+          }
+        }
 
-        ordered_friends[j].ang = atan2(v2[0], v2[1])*180./pi;// - 90.0 + 360.0;
+        // if (node->ID == 12) std::cout<<node->ID<<' '<<friend_num<<std::endl;
 
-        ordered_friends[j].node = node_friend;
+        std::vector<AngleSort> ordered_friends(friend_num);
+        for (j=0; j<friend_num; j++)
+        {
+          node_friend = node->friends_list[j];
+          node_friend->getMapCoords(*node, v2);
+
+          ordered_friends[j].ang = atan2(v2[0], v2[1])*180./pi;// - 90.0 + 360.0;
+
+          ordered_friends[j].node = node_friend;
+        }
+
+        std::sort(ordered_friends.begin(), ordered_friends.end());
+
+        for (j=0; j<friend_num; j++)
+        {
+          node->friends_list[j] = ordered_friends[j].node;
+        }
+
       }
-
-      std::sort(ordered_friends.begin(), ordered_friends.end());
-
-      for (j=0; j<node->friend_num; j++)
+    }
+    for (i=0; i<node_list.size(); i++)
+    {
+      node = node_list[i];
+      if (node->boundary == 1)
       {
-        node->friends_list[j] = ordered_friends[j].node;
+        node->orderFriends();
+        // int friend_num = node->friend_num;
+        // for (j=0; j<node->friend_num; j++)
+        // {
+        //   if (node->boundary == 1)
+        //   {
+        //     // node->boundary = 1;
+        //     break;
+        //   }
+        // }
+
       }
+    }
+}
+
+void Grid::twistGrid(void)
+{
+    int i, j, k, g;
+    Node * node, *node_friend, *node_friend2;
+    double c1[3] = {0.0, 0.0, 0.0};
+    double max_dist = pi/180. * 30.;
+    double rot_angle = pi/5.;
+    double tol=1.2;
+
+    std::vector< int > interior_nodes;
+
+    double avg_dist = 0.0;
+    for (i=0; i<node_list.size(); i++)
+    {
+        node = node_list[i];
+
+        double node_avg_dist = 0.0;
+        for (j=0; j<node->friend_num; j++)
+        {
+            node_avg_dist += sphericalLength(node->sph_coords, node->friends_list[j]->sph_coords);
+        }
+
+        avg_dist += node_avg_dist/node->friend_num;
+    }
+    avg_dist /= node_list.size();
+
+    // std::cout<<avg_dist<<std::endl;
+
+    std::cout<<'\t'<<"Ordering friends of new nodes..."<<std::flush;
+    for (i=0; i<node_list.size(); i++)
+    {
+        node = node_list[i];
+
+        if (node->xyz_coords[2] < 0.0) node->transformSph(rot_angle);
+
 
     }
+
+    for (i=0; i<node_list.size(); i++)
+    {
+
+        std::vector<int> surrounding_nodes;
+
+        Node * nodeA = this->node_list[i];
+
+        if ( fabs(nodeA->sph_coords[1]) < avg_dist*tol )
+        {
+            std::vector<int> remove_index;
+            for (j=0; j<nodeA->friend_num; j++)
+            {
+                Node * nodeB = nodeA->friends_list[j];
+                // double dist2 = (*nodeA - *nodeB).getMagnitude();    // TODO - does
+                double dist2 = sphericalLength(nodeA->sph_coords, nodeB->sph_coords);
+                //this create a new node?
+
+                // if (i==640) std::cout<<' '<<nodeA->ID<<' '<<nodeB->ID<<' '<<dist2<<' '<<avg_dist<<std::endl;
+
+                if (dist2 > avg_dist*tol)
+                {
+
+                    // nodeA->friends_list[k] = nodeB;
+                    // if (i==640) std::cout<<"REMOVE "<<nodeA->ID<<' '<<nodeB->ID<<' '<<dist2<<' '<<avg_dist<<std::endl;
+
+                    remove_index.push_back(j);
+                }
+            }
+
+            int count=0;
+            for (j=0; j<remove_index.size(); ++j)
+            {
+                nodeA->friends_list.erase(nodeA->friends_list.begin() + remove_index[j]-count);
+                nodeA->friend_num--;
+                count++;
+            }
+
+            // std::cout<<nodeA->sph_coords[1]*180./pi<<std::endl;
+            for (j=0; j<node_list.size(); j++)
+            {
+                Node * nodeB = this->node_list[j];
+                if ( (i != j) && (fabs(nodeB->sph_coords[1]) < avg_dist*tol) )
+                {
+
+                    double dist = sphericalLength(nodeA->sph_coords, nodeB->sph_coords);    // TODO - does this create a new node?
+
+
+                    if (dist < avg_dist*tol && !nodeA->isFriend(nodeB))
+                    {
+
+                        std::cout<<i<<' '<<j<<' '<<dist<<' '<<avg_dist<<std::endl;
+
+                        std::cout<<"REPLACING "<<nodeA->ID<<' '<<nodeB->ID<<' '<<dist<<' '<<avg_dist<<' '<<nodeA->friend_num<<std::endl;
+
+                        nodeA->printCoords();
+                        nodeB->printCoords();
+
+                        nodeA->addFriend(nodeB);
+                        nodeA->friend_num++;
+
+
+                    }
+                }
+            }
+        }
+
+        // surrounding_nodes.push_back(-1);
+        // nodeA->friends_list.push_back(NULL);
+        //
+        // this->friends_list.push_back( surrounding_nodes );
+    }
+
+    // for (i=0; i<node_list.size(); i++)
+    // {
+    //     node = node_list[i];
+    //
+    //     if (  )
+    //     {
+    //
+    //     }
+    // }
+
+}
+
+void Grid::applyBoundary(void)
+{
+    int i, j, k;
+    Node * node, *node_friend, *node_friend2;
+    double c1[3] = {0.0, 0.0, 0.0};
+    double dist = 0.0;
+    double max_dist = pi/180. * 30.;
+
+    std::vector< int > interior_nodes;
+
+    // std::cout<<'\t'<<"Ordering friends of new nodes..."<<std::flush;
+    for (i=0; i<node_list.size(); i++)
+    {
+        node = node_list[i];
+
+        dist = sphericalLength(node->sph_coords, c1);
+
+        if (dist <= max_dist){
+            interior_nodes.push_back(node->ID);
+            node->boundary = 0;
+        }
+        else
+        {
+            node->boundary = -1;
+        }
+    }
+
+    for (i=0; i<interior_nodes.size(); i++)
+    {
+        node = node_list[ interior_nodes[i] ];
+        // node->ID = i;
+
+        for (j=0; j<node->friend_num; j++)
+        {
+            // if (node->friends_list[j]->ID == -2)
+            // {
+            //     node->boundary = 1;
+            //     break;
+            // }
+            if (node->friends_list[j]->boundary == -1)
+            {
+                node->boundary = 1;
+                break;
+            }
+        }
+
+    }
+
+
+
+}
+
+void Grid::refineBoundary(void)
+{
+    int i, j, k;
+    double mag;
+    Node * node, * next_node, * last_node, * first_node;
+    int bnum = 301;
+    double boundary_angle = pi/180. * 30.;
+    std::vector<Node *> boundary_nodes;
+    std::vector<double> ang_diff;
+
+    struct NextNode {
+        Node * node_pointer;
+        double ang;
+    };
+
+    // Find the angle between the boundary and the boundary node positions
+    for (i=0; i<node_list.size(); i++)
+    {
+        node = this->node_list[i];
+        // std::cout<<i<<' '<<node->ID<<' '<<node_list.size()<<std::endl;
+        if (node->boundary == 1)
+        {
+            boundary_nodes.push_back(node);
+
+            ang_diff.push_back( boundary_angle - acos(node->xyz_coords[0]) );
+        }
+    }
+
+    // Get element index of the node closest to the boundary (smallest ang_diff)
+    // Note that there are probably multiple minimums in this vector, but only
+    // minimum is needed here.
+    int indx_closest = std::distance(std::begin(ang_diff), std::min_element( std::begin(ang_diff), std::end(ang_diff) ) );
+    ang_diff.clear();
+
+    // Retrieve closest node
+    node = boundary_nodes[indx_closest];
+
+    // Purge boundary node vector and then add the closest node
+    boundary_nodes.clear();
+    boundary_nodes.push_back( node );
+
+    // Now find the friend of node that is closest to the boundary, and propagate
+    // along the boundary, repeating this. Note that the friend that is closest
+    // to the boundary may be inside *or* outside the boundary
+
+    last_node = node;
+    next_node = node->friends_list[0];
+    first_node = node;
+
+    double v1[3] = {0., 0., 0.};
+    double v2[3] = {0., 0., 0.};
+    double vz[3] = {0., 0., 1.};
+
+    v1[1] = -node->xyz_coords[1]; // <------ bad nasty hack :(
+    v1[2] = node->xyz_coords[2];
+
+    do
+    {
+
+        std::vector<NextNode> next_nodes;
+        for (j=0; j<node->friend_num; j++)
+        {
+            NextNode potential_node;
+            potential_node.node_pointer = node->friends_list[j];
+            potential_node.ang = fabs(boundary_angle - acos(node->friends_list[j]->xyz_coords[0]));
+            v2[1] = -potential_node.node_pointer->xyz_coords[1]; // <------ bad nasty hack :(
+            v2[2] = potential_node.node_pointer->xyz_coords[2];
+
+            // retrieve angle between z axis and the node's position projected
+            // onto the z-y plane.
+            double dot = dotProduct(v1, v2);
+            double det = v1[1]*v2[2] - v1[2]*v2[1];
+            double first_ang = atan2(det, dot);
+
+            if (first_ang < 0.0) next_nodes.push_back(potential_node);
+
+            // std::cout<<potential_node.node_pointer->ID<<' '<<potential_node.ang<<std::endl;
+        }
+        std::sort(next_nodes.begin(), next_nodes.end(),
+               [](const auto& x, const auto& y) { return x.ang < y.ang; } );
+       // for (j=0; j<next_nodes.size(); j++)
+       // {
+       //     // std::cout<<'\t'<<next_nodes[j].node_pointer->ID<<' '<<next_nodes[j].ang<<std::endl;
+       // }
+
+       next_node = next_nodes[0].node_pointer;
+       if (next_nodes.size() > 1) {
+           std::cout<<next_nodes[1].ang/next_nodes[0].ang<<' '<<next_nodes[1].node_pointer->boundary<<std::endl;
+           if ((next_nodes[1].node_pointer->boundary == -1)
+                && (next_nodes[1].ang < 1.8*next_nodes[0].ang))
+           next_node = next_nodes[1].node_pointer;
+
+       }
+
+       v2[1] = -next_node->xyz_coords[1]; // <------ bad nasty hack :(
+       v2[2] = next_node->xyz_coords[2];
+
+       // retrieve angle between z axis and the node's position projected
+       // onto the z-y plane.
+       double dot = dotProduct(vz, v2);
+       double det = vz[1]*v2[2] - vz[2]*v2[1];
+       double offset = atan2(det, dot);
+
+       double new_xyz[3];
+       new_xyz[1] = sin(boundary_angle)*sin(offset);
+       new_xyz[2] = sin(boundary_angle)*cos(offset);
+       new_xyz[0] = sqrt(1. - pow(new_xyz[1], 2.0) - pow(new_xyz[2], 2.0));
+
+       next_node->updateXYZ(new_xyz);
+
+       next_nodes.clear();
+
+       next_node->boundary = 2;
+
+       boundary_nodes.push_back( next_node );
+       last_node = node;
+       node = next_node;
+
+       v1[1] = -node->xyz_coords[1]; // <------ bad nasty hack :(
+       v1[2] = node->xyz_coords[2];
+
+       // for (j=0; j<boundary_nodes.size(); j++) std::cout<<boundary_nodes[j]->ID<<", ";
+       // std::cout<<std::endl;
+       // std::cout<<last_node->ID<<" is linked to "<<node->ID<<' '<<first_node->ID<<std::endl;
+   }
+   while (node != first_node);
+
+
+
+   int count = 0;
+   for (i=0; i<node_list.size(); i++)
+   {
+       node = this->node_list[i];
+       if ((node->boundary == 0) || (node->boundary == 1)) node->boundary = 0;
+       if (node->boundary == 2) node->boundary = 1;
+
+       if (node->boundary >= 0) node->ID = count++;
+   }
+
+   this->orderFriends();
+
+   count = 0;
+   for (i=0; i<boundary_nodes.size(); i++)
+   {
+       node = boundary_nodes[i];
+       int interior_friend_num = 0;
+       int indx;
+       for (j=0; j<node->friend_num; j++)
+       {
+           if (node->friends_list[j]->boundary == 0) {
+               interior_friend_num++;
+               indx = j;
+           }
+       }
+
+       if ((interior_friend_num == 1)) {
+           // std::cout<<node->ID<<std::endl;
+           for (j=0; j<node->friend_num; j++)
+           {
+               std::cout<<node->friends_list[j]->ID<<' ';
+
+           }
+           std::cout<<indx<<std::endl;
+
+           double cnode_sph[3], lnode_sph[3], rnode_sph[3], inode_sph[3];
+
+           for (k=0; k<3; k++) {
+             cnode_sph[k] = node->sph_coords[k];
+             inode_sph[k] = node->friends_list[indx]->sph_coords[k];
+             lnode_sph[k] = node->friends_list[indx-1]->sph_coords[k];
+             rnode_sph[k] = node->friends_list[indx+1]->sph_coords[k];
+           }
+           // cnode_sph[1] = pi*0.5 - cnode_sph[1];
+           // inode_sph[1] = pi*0.5 - inode_sph[1];
+           // lnode_sph[1] = pi*0.5 - lnode_sph[1];
+           // rnode_sph[1] = pi*0.5 - rnode_sph[1];
+
+
+           double l_area, r_area;
+           l_area = sphericalArea(cnode_sph, lnode_sph, inode_sph);
+           r_area = sphericalArea(cnode_sph, inode_sph, rnode_sph);
+
+           std::cout<<node->ID<<' '<<node->friends_list[indx]->ID<<' '<<node->friends_list[indx-1]->ID<<' '<<l_area<<std::endl;
+           std::cout<<node->ID<<' '<<node->friends_list[indx]->ID<<' '<<node->friends_list[indx+1]->ID<<' '<<r_area<<std::endl;
+           std::cout<<std::endl;
+           // for (j=0; j<node->friend_num; j++)
+           // {
+           //     if (node->friends_list[j]->boundary == 0) {
+           //         interior_friend_num++;
+           //         indx = j;
+           //     }
+           // }
+
+           // Node * replacement_node = node->friends_list[indx];
+           //
+           // double xyz[3];
+           // xyz[0] = node->xyz_coords[0];
+           // xyz[1] = node->xyz_coords[1];
+           // xyz[2] = node->xyz_coords[2];
+           //
+           // replacement_node->updateXYZ(xyz);
+           // replacement_node->ID = node->ID;
+           // replacement_node->boundary = 1;
+           //
+           // // std::cout<<replacement_node->ID<<' '<<i<<std::endl;
+           //
+           // node->boundary = -1;
+           // node->ID = -2;
+           //
+           // boundary_nodes[i] = replacement_node;
+           // count++;
+       }
+   }
+   //
+   // std::cout<<count<<' '<<boundary_nodes.size()<<std::endl;
+   //
+   count = 0;
+   for (i=0; i<node_list.size(); i++)
+   {
+       node = this->node_list[i];
+       // if ((node->boundary == 0) || (node->boundary == 1)) node->boundary = 0;
+       // if (node->boundary == 2) node->boundary = 1;
+
+       if (node->boundary >= 0) node->ID = count++;
+   }
+
+   // std::cout<<std::endl;
+
+
 }
 
 void Grid::shiftNodes(void)
@@ -278,68 +713,69 @@ void Grid::shiftNodes(void)
         // call find centroid function
     iter = 0;
     this->findCentroids();
-    while ((iter < 2000) && residual > e_converge)//(residual > e_converge)
+    // std::cout<<"HI"<<std::endl;
+    while ((iter < 2000))// && residual > e_converge)//(residual > e_converge)
     {
         residual_old = residual;
         residual = 0.0;
         for (i=0; i<node_list.size(); i++)
         {
             node1 = this->node_list[i];
-
-            for (k=0; k<3; k++) {
-                sph1[k] = node1->sph_coords[k];    //latitude
-                xy1[k] = node1->xyz_coords[k];
-            }
-
-            xy_new_center[0] = 0.0;
-            xy_new_center[1] = 0.0;
-            xy_new_center[2] = 0.0;
-
-            for (j=0; j<node1->friend_num; j++)
+            if (node1->boundary == 0)
             {
-
-                for (k=0; k<3; k++)
-                {
-                    sph2[k] = node1->centroids[j][k];
-                    sph3[k] = node1->centroids[(j+1)%node1->friend_num][k];
+                // std::cout<<node1->ID<<' '<<node1->boundary<<std::endl;
+                for (k=0; k<3; k++) {
+                    sph1[k] = node1->sph_coords[k];    //latitude
+                    xy1[k] = node1->xyz_coords[k];
                 }
 
-                areas[j] = sphericalArea(sph1, sph2, sph3);
-                // std::cout<<j<<'\t'<<areas[j]<<'\t'<<sph1[1]*180./pi<<'\t'<<sph2[1]*180./pi<<'\t'<<sph3[1]*180./pi<<std::endl;
-                // sph1[1] = pi*0.5 - sph1[1];
-                sph2[1] = pi*0.5 - sph2[1];
-                sph3[1] = pi*0.5 - sph3[1];
+                xy_new_center[0] = 0.0;
+                xy_new_center[1] = 0.0;
+                xy_new_center[2] = 0.0;
 
-                sph2cart(sph2, xy2);
-                sph2cart(sph3, xy3);
+                for (j=0; j<node1->friend_num; j++)
+                {
+                    for (k=0; k<3; k++)
+                    {
+                        sph2[k] = node1->centroids[j][k];
+                        sph3[k] = node1->centroids[(j+1)%node1->friend_num][k];
+                        // std::cout<<node1->ID<<' '<<sph3[k]*180./pi<<' '<<sph3[k]*180./pi<<std::endl;
+                    }
 
-                for (k=0; k<3; k++)
-                    xy_new_center[k] += areas[j]*(xy1[k] + xy2[k] + xy3[k]);
+                    areas[j] = sphericalArea(sph1, sph2, sph3);
+                    // std::cout<<j<<'\t'<<areas[j]<<'\t'<<sph1[1]*180./pi<<'\t'<<sph2[1]*180./pi<<'\t'<<sph3[1]*180./pi<<std::endl;
+                    // sph1[1] = pi*0.5 - sph1[1];
+                    sph2[1] = pi*0.5 - sph2[1];
+                    sph3[1] = pi*0.5 - sph3[1];
 
+                    sph2cart(sph2, xy2);
+                    sph2cart(sph3, xy3);
 
+                    for (k=0; k<3; k++)
+                        xy_new_center[k] += areas[j]*(xy1[k] + xy2[k] + xy3[k]);
+                }
 
-            }
+                mag = 0.0;
+                for (k=0; k<3; k++) mag += xy_new_center[k]*xy_new_center[k];
+                mag = sqrt(mag);
 
-            mag = 0.0;
-            for (k=0; k<3; k++) mag += xy_new_center[k]*xy_new_center[k];
-            mag = sqrt(mag);
+                r = 0.0;
+                for (k=0; k<3; k++) {
+                    xy_new_center[k] /= mag;
 
-            r = 0.0;
-            for (k=0; k<3; k++) {
-                xy_new_center[k] /= mag;
+                    r += (xy_new_center[k] - xy1[k])*(xy_new_center[k] - xy1[k]);
+                }
+                r = sqrt(r);
 
-                r += (xy_new_center[k] - xy1[k])*(xy_new_center[k] - xy1[k]);
-            }
-            r = sqrt(r);
-
-            //if (node1->friend_num == 6)
-            //{
+                //if (node1->friend_num == 6)
+                //{
                 residual += r*r;
                 node1 = this->node_list[i];
                 node1->updateXYZ(xy_new_center);
-            //}
-
+                //}
+            }
         }
+
 
         std::cout<<iter<<'\t'<<residual<<std::endl;
 
@@ -349,80 +785,6 @@ void Grid::shiftNodes(void)
 
 
     }
-
-
-    // for (i=0; i<node_list.size(); i++)
-    // {
-    //     node1 = this->node_list[i];
-    //     for (k=0; k<3; k++) {
-    //         sph1[k] = node1->sph_coords[k];    //latitude
-    //         xy1[k] = node1->xyz_coords[k];
-    //     }
-    //
-    //
-    //     area = 0.0;
-    //     xy_new_center[0] = 0.0;
-    //     xy_new_center[1] = 0.0;
-    //     xy_new_center[2] = 0.0;
-    //
-    //     for (j=0; j<node1->friend_num; j++)
-    //     {
-    //         node2 = node1->friends_list[j];
-    //         node3 = node1->friends_list[(j+1)%node1->friend_num];
-    //
-    //         for (k=0; k<3; k++)
-    //         {
-    //             sph2[k] = node1->centroids[j][k];
-    //             sph3[k] = node1->centroids[(j+1)%node1->friend_num][k];
-    //         }
-    //
-    //         sph1[1] = pi*0.5 - sph1[1];
-    //         sph2[1] = pi*0.5 - sph2[1];
-    //         sph3[1] = pi*0.5 - sph3[1];
-    //
-    //         sph2cart(sph2, xy2);
-    //         sph2cart(sph3, xy3);
-    //
-    //         for (k=0; k<3; k++) xy_sub_centers[j][k] = (xy1[k]+xy2[k]+xy3[k])/3.0;
-    //
-    //         sph1[1] = pi*0.5 - sph1[1];
-    //         sph2[1] = pi*0.5 - sph2[1];
-    //         sph3[1] = pi*0.5 - sph3[1];
-    //
-    //         areas[j] = sphericalArea(sph1, sph2, sph3);
-    //         area += areas[j];
-    //
-    //     }
-    //
-    //     for (j=0; j<node1->friend_num; j++)
-    //     {
-    //         for (k=0; k<3; k++)
-    //         {
-    //             xy_new_center[k] += xy_sub_centers[j][k]*areas[j];
-    //         }
-    //     }
-    //
-    //     for (k=0; k<3; k++) xy_new_center[k] /= area;
-    //
-    //     mag = sqrt(xy_new_center[0]*xy_new_center[0]
-    //             +xy_new_center[1]*xy_new_center[1]
-    //             +xy_new_center[2]*xy_new_center[2]);
-    //
-    //     for (k=0; k<3; k++) {
-    //         xy_new_center[k] /= mag;
-    //         shifted_xyz[i][k] = xy_new_center[k];
-    //     }
-    // }
-    //
-    // for (i=0; i<node_list.size(); i++)
-    // {
-    //     new_xyz[0] = shifted_xyz[i][0];
-    //     new_xyz[1] = shifted_xyz[i][1];
-    //     new_xyz[2] = shifted_xyz[i][2];
-    //
-    //     node1 = this->node_list[i];
-    //     node1->updateXYZ(new_xyz);
-    // }
 
 }
 
@@ -436,41 +798,66 @@ void Grid::findCentroids(void)
     int i, j, k;
     double mag;
     Node * node, *node_friend, *node_friend2;
-    double xy_center[3];
+    double xy_center[3], xy_center2[3];
     double sph_center[3];
 
     for (i=0; i<node_list.size(); i++)
     {
         node = this->node_list[i];
-        for (j=0; j<node->friend_num; j++)
+        if (node->boundary >= 0)
         {
-            node_friend  = node->friends_list[j];
-            node_friend2 = node->friends_list[(j+1)%node->friend_num];
+            int skip_num = 0;
+            if (node->dead_num) skip_num = node->dead_num + 1;
+            for (j=0; j<node->friend_num - skip_num; j++)
+            // for (j=0; j<node->friend_num; j++)
+            {
+                node_friend  = node->friends_list[j];
+                node_friend2 = node->friends_list[(j+1)%node->friend_num];
 
-            for (k=0; k<3; k++) {
-                xy_center[k] = (node->xyz_coords[k]
-                                + node_friend->xyz_coords[k]
-                                + node_friend2->xyz_coords[k]);
+                // if (node->ID ==3) std::cout<<node->ID<<' '<<node_friend->ID<<' '<<node_friend2->ID<<node->friend_num - node->dead_num<<std::endl;
+                // for (k=0; k<3; k++) {
+                //     xy_center[k] = (node->xyz_coords[k]
+                //     + node_friend->xyz_coords[k]
+                //     + node_friend2->xyz_coords[k]);
+                // }
+                //
+                // mag = sqrt(xy_center[0]*xy_center[0] + xy_center[1]*xy_center[1] + xy_center[2]*xy_center[2]);
+                // xy_center[0] /= mag;
+                // xy_center[1] /= mag;
+                // xy_center[2] /= mag;
+                //
+                // cart2sph(xy_center, sph_center);
+                //
+                // node->centroids[j][0] = sph_center[0];
+                // node->centroids[j][1] = sph_center[1];
+                // node->centroids[j][2] = sph_center[2];
+
+                voronoiCenter(node->xyz_coords, node_friend->xyz_coords, node_friend2->xyz_coords, xy_center2);
+
+                // std::cout<<xy_center[2]<<' '<<xy_center2[2]<<std::endl;
+
+                cart2sph(xy_center2, sph_center);
+
+                node->centroids[j][0] = sph_center[0];
+                node->centroids[j][1] = sph_center[1];
+                node->centroids[j][2] = sph_center[2];
+
+                // if ((node_friend->boundary < 0) || (node_friend2->boundary < 0))
+                // {
+                //     node->centroids[j][0] = sph_center[0];
+                //     node->centroids[j][1] = sph_center[1];
+                //     node->centroids[j][2] = sph_center[2];
+                //
+                // }
+
             }
 
-            mag = sqrt(xy_center[0]*xy_center[0] + xy_center[1]*xy_center[1] + xy_center[2]*xy_center[2]);
-            xy_center[0] /= mag;
-            xy_center[1] /= mag;
-            xy_center[2] /= mag;
-
-            cart2sph(xy_center, sph_center);
-
-            node->centroids[j][0] = sph_center[0];
-            node->centroids[j][1] = sph_center[1];
-            node->centroids[j][2] = sph_center[2];
-
-        }
-
-        if (node->friend_num == 5)
-        {
-            node->centroids[5][0] = -1.0;
-            node->centroids[5][1] = -1.0;
-            node->centroids[5][2] = -1.0;
+            if (node->friend_num == 5)
+            {
+                node->centroids[5][0] = -1.0;
+                node->centroids[5][1] = -1.0;
+                node->centroids[5][2] = -1.0;
+            }
         }
     }
 }
@@ -690,34 +1077,54 @@ void Grid::saveGrid2File(void)
     int f[6];
     double cx[6], cy[6];
 
-    outFile = fopen("test_file.txt", "w");
+    std::string file_path = "grid_l"+std::to_string(recursion_lvl+1)+".txt";
+
+    outFile = fopen(&file_path[0], "w");
 
     fprintf(outFile, "%-5s %-12s %-12s %-38s %-20s\n", "ID", "NODE LAT", "NODE LON", "FRIENDS LIST", "CENTROID COORD LIST");
-
 
     for (i=0; i<this->node_list.size(); i++)
     {
         node = this->node_list[i];
-        lat = node->sph_coords[1]*180./pi;
-        lon = node->sph_coords[2]*180./pi + 180.0;
 
-        if (lon>359.99) lon = 0.0;
-        if (i<2) lon = 180.0;
-        for (j=0; j<node->friend_num; j++)
+        if (node->boundary >= 0)
         {
-            f[j] = node->friends_list[j]->ID;
-            cx[j] = node->centroids[j][1]*180./pi;
-            cy[j] = node->centroids[j][2]*180./pi + 180.0;
-            if (cy[j]>359.99) cy[j] =0.0;
+            // std::cout<<node->ID<<std::endl;
+
+            lat = node->sph_coords[1]*180./pi;
+            lon = node->sph_coords[2]*180./pi + 180.0;
+
+            if (lon>359.99) lon = 0.0;
+            if (i<2) lon = 180.0;
+            for (j=0; j<node->friend_num; j++)
+            {
+                f[j] = node->friends_list[j]->ID;
+
+                if (f[j] >= 0)
+                {
+                    cx[j] = node->centroids[j][1]*180./pi;
+                    cy[j] = node->centroids[j][2]*180./pi + 180.0;
+                    if (cy[j]>359.99) cy[j] =0.0;
+                }
+                else
+                {
+                    cx[j] = -1.0;
+                    cy[j] = -1.0;
+                }
+            }
+            for (j=node->friend_num; j<6; j++)
+            {
+                // if (node->friend_num == 5) {
+                    f[j] = -1;
+                    cx[j] = -1.0;
+                    cy[j] = -1.0;
+                // }
+            }
+            fprintf(outFile, "%-5d %12.16f %12.16f { %4d, %4d, %4d, %4d, %4d, %4d}, {( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f)} \n",
+            node->ID, lat, lon, f[0], f[1], f[2], f[3], f[4], f[5],
+            cx[0], cy[0], cx[1], cy[1], cx[2], cy[2], cx[3], cy[3], cx[4], cy[4], cx[5], cy[5]);
         }
-        if (node->friend_num == 5) {
-            f[5] = -1;
-            cx[j] = -1.0;
-            cy[j] = -1.0;
-        }
-        fprintf(outFile, "%-5d %12.16f %12.16f { %4d, %4d, %4d, %4d, %4d, %4d}, {( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f), ( % 10.16f, % 10.16f)} \n",
-                i, lat, lon, f[0], f[1], f[2], f[3], f[4], f[5],
-                cx[0], cy[0], cx[1], cy[1], cx[2], cy[2], cx[3], cy[3], cx[4], cy[4], cx[5], cy[5]);
+
     }
 
 

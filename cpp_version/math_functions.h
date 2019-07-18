@@ -64,11 +64,13 @@ double inline sphericalLength(double sph_c1[], double sph_c2[])
     lat1 = sph_c1[1];
     lat2 = sph_c2[1];
     dlat = lat2 - lat1;
-    dlon = sph_c2[2]-sph_c1[2];
+    dlon = fabs(sph_c2[2]-sph_c1[2]);
 
-    length = sin(dlat*0.5)*sin(dlat*0.5);
-    length += cos(lat1)*cos(lat2)*sin(dlon*0.5)*sin(dlon*0.5);
-    length = 2.*asin(sqrt(length));
+    // length = sin(dlat*0.5)*sin(dlat*0.5);
+    // length += cos(lat1)*cos(lat2)*sin(dlon*0.5)*sin(dlon*0.5);
+    // length = 2.*asin(sqrt(length));
+
+    length = acos(sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2) * cos(dlon) );
 
     return length;
 }
@@ -80,13 +82,19 @@ double inline sphericalArea(double sph_c1[], double sph_c2[], double sph_c3[])
     double a, b, c;
     double A, B, C, E;
 
-    a = sphericalLength(sph_c1, sph_c2);
-    b = sphericalLength(sph_c2, sph_c3);
-    c = sphericalLength(sph_c3, sph_c1);
+    a = fabs(sphericalLength(sph_c1, sph_c2));
+    b = fabs(sphericalLength(sph_c2, sph_c3));
+    c = fabs(sphericalLength(sph_c3, sph_c1));
 
-    A = acos((cos(a) - cos(b)*cos(c))/(sin(b)*sin(c)));
-    B = asin(sin(A)*sin(b)/sin(a));
-    C = asin(sin(A)*sin(c)/sin(a));
+    // A = fabs( acos((cos(a) - cos(b)*cos(c))/(sin(b)*sin(c))));
+    // B = fabs( asin(sin(A)*sin(b)/sin(a)));
+    // C = fabs( asin(sin(A)*sin(c)/sin(a)));
+
+    C = fabs( acos((cos(c) - cos(b)*cos(a))/(sin(b)*sin(a))));
+    A = fabs( acos((cos(a) - cos(b)*cos(c))/(sin(b)*sin(c))));
+    B = fabs( acos((cos(b) - cos(a)*cos(c))/(sin(a)*sin(c))));
+    // B = fabs( asin(sin(A)*sin(b)/sin(a)));
+    // C = fabs( asin(sin(A)*sin(c)/sin(a)));
 
     E = (A + B + C) - pi;
 
@@ -99,6 +107,28 @@ void inline crossProduct(double v1[], double v2[], double v1xv2[])
     v1xv2[0] = v1[1]*v2[2] - v2[1]*v1[2];
     v1xv2[1] = -(v1[0]*v2[2] - v2[0]*v1[2]);
     v1xv2[2] = v1[0]*v2[1] - v2[0]*v1[1];
+}
+
+void inline voronoiCenter(double v1[], double v2[], double v3[], double vc[]);
+void inline voronoiCenter(double v1[], double v2[], double v3[], double vc[])
+{
+    double v11[3], v12[3];
+    double vcross[3];
+
+    for (int k=0; k<3; k++)
+    {
+        v11[k] = v2[k]-v1[k];
+        v12[k] = v3[k]-v1[k];
+    }
+    crossProduct(v11, v12, vcross);
+
+    double mag;
+
+    for (int k=0; k<3; k++) mag += pow(vcross[k], 2.0);
+    mag = sqrt(mag);
+
+    for (int k=0; k<3; k++) vc[k] = -vcross[k]/mag;
+
 }
 
 double inline dotProduct(double v1[], double v2[]);
@@ -156,6 +186,24 @@ bool inline isOnEdge(double v1[], double v2[], double v[])
     if (fabs(dotProduct(v, n1)) < 1e-8) return true;
     // if (dotProduct(s1, n1) > -1e-8 && dotProduct(v, n2) > -1e-8 && dotProduct(v, n3) > -1e-8) return true;
     else return false;
+}
+
+void inline getCircularBoundaryPosition(double angularRadius, double offset, double xyz[]);
+void inline getCircularBoundaryPosition(double angularRadius, double offset, double xyz[])
+{
+    double radius = 1.0;
+    xyz[0] = radius * cos(angularRadius);
+    xyz[1] = radius * sin(angularRadius) * sin(offset);
+    xyz[2] = radius * sin(angularRadius) * cos(offset);
+}
+
+double inline getAngleBetween(double v1[], double v2[]);
+double inline getAngleBetween(double v1[], double v2[])
+{
+    double mag1 = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
+    double mag2 = sqrt(v2[0]*v2[0] + v2[1]*v2[1] + v2[2]*v2[2]);
+
+    return acos(dotProduct(v1, v2)/(mag1*mag2));
 }
 
 // void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)

@@ -21,6 +21,9 @@ class Node
     std::vector< std::vector<double> > centroids = std::vector< std::vector<double> > (6, std::vector<double> (3));
 
     int friend_num;           // number of surrounding friends
+    int dead_num = 0;
+    int pentagon = 0;
+    int boundary = 0;
 
     // Constructor takes xyz coords, and usually an ID
     Node(double xyz[], int ID_num=0);
@@ -38,12 +41,17 @@ class Node
     // function adds a node to frieds array
     void addFriend(Node * n);
     void addTempFriend(Node * n);
+    int isFriend(Node * n);
     void addCentroids(std::vector<double> ll_coords);
+
+    void orderFriends();
 
     // project current xyz coords onto sphere of radius r
     void project2Sphere(double r=1.0);
 
     void updateXYZ(const double xyz[]);
+
+    void transformSph(const double rot);
 
     // return the coordinates (or copy?) of the Node
     double * getCartCoords();
