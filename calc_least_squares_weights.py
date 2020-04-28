@@ -14,7 +14,7 @@ def main():
     N = int(sys.argv[1])        # geodesic grid recursion level
 
 
-    r = 1.0                     # spherical radius
+    r = 1560.8e3                # spherical radius
 
     # Load geodesic grid corresponding to level N
     Grid = ReadGrid.read_grid(N)
@@ -83,10 +83,15 @@ def main():
 
         c = np.matmul(interpOperator, s)
 
-    
+        if i==0:
+            print(interpOperator)
 
+        # print(c[0])
+
+    
+    # print(nodeOperators[0])
         # print(test[f_ID], xf*c[0] + yf*c[1] + xf**2.0*c[2] + xf*yf*c[3] + yf**2.0*c[4])
-        # print(test[f_ID], c[0] + xf*c[0+1] + yf*c[1+1] + xf**2.0*c[2+1] + xf*yf*c[3+1] + yf**2.0*c[4+1])
+        print(test[f_ID], c[0] + xf*c[0+1] + yf*c[1+1] + xf**2.0*c[2+1] + xf*yf*c[3+1] + yf**2.0*c[4+1])
     SaveMatrix(N, nodeOperators)
 
 
