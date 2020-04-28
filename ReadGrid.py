@@ -163,7 +163,7 @@ class Shape:
 
 def read_grid(N):
 
-    load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '_b.txt'
+    load_file = '/home/hamish/Research/GeodesicPython/grid_l' + str(N) + '.txt'
     # load_file = 'cpp_version/test_file.txt'
 
     print("\nReading grid from file", load_file)

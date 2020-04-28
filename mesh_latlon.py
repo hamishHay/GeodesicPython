@@ -42,7 +42,7 @@ def main():
 
     ll_node_num = len(ll_lat)*len(ll_lon)   # number of nodes on the lat-lon grid
 
-    ID_MASTER = nodes[-1].ID   # master cell ID for geodesic grid
+    ID_MASTER = nodes[0].ID   # master cell ID for geodesic grid
     ll_count = 0    # counter for each lat-lon cell
 
     # Create 3D array to holding geodesic grid IDs for each lat-lon cell

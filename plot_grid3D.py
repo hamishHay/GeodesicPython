@@ -4,6 +4,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from matplotlib import animation
 # from mpl_toolkits.basemap import Basemap
 import sys
 import h5py
@@ -19,10 +20,14 @@ nodes = Grid.nodes
 fig = plt.figure(figsize=(12,12))
 ax = Axes3D(fig)
 
-lighting = False
-cv = False
+lighting = True
+cv = True
 
-# in_file = h5py.File("../GeodesicODISBeta/GeodesicODIS/flux/DATA_OBL/data.h5", 'r')
+# in_file = h5py.File("../GeodesicODISBeta/GeodesicODIS/DATA/data.h5", 'r')
+# data_x = in_file['displacement'][:]
+# data_x += abs(np.amin(data_x))
+# data_x = data_x / np.amax(abs(data_x))
+# print(np.shape(data_x))
 
 start_f = -400
 
@@ -132,7 +137,7 @@ for node in nodes[:]:#[st:st+1]:
     else:
         new_f_list = [k for k in node.friends if k >= 0]
 
-        print(new_f_list)
+        # print(new_f_list)
         # fig,ax11 = plt.subplots()
         for j in range(face_num):
             x = [node.x]
@@ -200,7 +205,7 @@ for node in nodes[:]:#[st:st+1]:
         # if f_num == 5: ax.add_collection3d(Poly3DCollection(verts, linewidths=1.4, edgecolors=(1*col,1*col,1*col,1.0),facecolor=(col*0.5,0,0,1.0)))
         # else: ax.add_collection3d(Poly3DCollection(verts, linewidths=1.4, edgecolors=(1*col,1*col,1*col,1.0),facecolor=(col,0,0,1.0)))
         ec = 0.1
-        poly = Poly3DCollection(verts, linewidths=0.05, edgecolors=(ec,ec,ec,1.0),facecolor=(col,0,0,0.8))
+        poly = Poly3DCollection(verts, linewidths=0.8, edgecolors=(ec,ec,ec,1.0),facecolor=(col,0,0,0.8))
         poly_collection.append(poly)
         ax.add_collection3d(poly)
 
@@ -211,7 +216,7 @@ ax.set_xlim([-view_lim,view_lim])
 ax.set_ylim([-view_lim,view_lim])
 ax.set_zlim([-view_lim,view_lim])
 
-ax.view_init(elev=0., azim=0)
+ax.view_init(elev=30., azim=-20)
 
 plt.axis('off')
 
@@ -219,16 +224,38 @@ savename = "/home/hamish/Dropbox/grid_l" + str(N)
 # savename = "art/grid_l" + str(N)
 if lighting:
     savename += '_lighting'
-savename += ".pdf"
-plt.savefig(savename, dpi=300)
+savename += ".png"
+plt.savefig(savename, dpi=400, transparent=True)
 # count = 0
 # for angle in range(0, 360):
-#     ax.view_init(30, angle)
+#     # ax.view_init(30, angle)
 #     plt.draw()
-#     plt.pause(.001)
-#     savename = "/home/hamish/Dropbox/Spinning/grid_l" + str(N)+'_'+str(count)+'.png'
+#     # plt.pause(.001)
+#     savename = "/home/hamish/Dropbox/Spinning/grid_l" + str(N)+'_{:03d}.png'.format(count)
 #     count+=1
-#     plt.savefig(savename, dpi=100, bbox_inches='tight', transparent=True)
+#     # plt.savefig(savename, dpi=100, bbox_inches='tight', transparent=True)
+#     plt.savefig(savename, dpi=80, transparent=True)
+
+#     print(len(poly_collection))
 #     for i in range(len(poly_collection)):
 #         poly_collection[i].set_facecolor(cmap(data_x[count][i]))
+
+# def update(i):
+#     # plt.draw()
+#     # plt.pause(.001)
+#     # savename = "/home/hamish/Dropbox/Spinning/grid_l" + str(N)+'_{:03d}.png'.format(count)
+#     # count+=1
+#     # # plt.savefig(savename, dpi=100, bbox_inches='tight', transparent=True)
+#     # plt.savefig(savename, dpi=100, transparent=True)
+
+#     # print(len(poly_collection))
+#     for j in range(len(poly_collection)):
+#         poly_collection[j].set_facecolor(cmap(data_x[i][j]))
+
+#     return poly_collection
+
+# ani = animation.FuncAnimation(fig, update, 20,
+#                               interval=20, blit=True)
+
+# ani.save("/home/hamish/Dropbox/Spinning/test.mp4", codec="png",savefig_kwargs={'transparent': True, 'facecolor': 'none'})
 # plt.show()

@@ -1077,6 +1077,8 @@ void Grid::saveGrid2File(void)
     int f[6];
     double cx[6], cy[6];
 
+    std::cout<<"SAVING"<<std::endl;
+
     std::string file_path = "grid_l"+std::to_string(recursion_lvl+1)+".txt";
 
     outFile = fopen(&file_path[0], "w");
