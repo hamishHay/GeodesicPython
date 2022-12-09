@@ -7,7 +7,7 @@ import h5py
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
-from scipy.sparse import csr_matrix, save_npz
+from scipy.sparse import csr_matrix, save_npz, load_npz
 from shapely.geometry import Polygon
 from scipy.spatial import cKDTree
 
@@ -241,8 +241,8 @@ def main():
     print("Mapping matrix non-zero elements:", len(data))
     print("Mapping matrix sparsity:", len(data)/(sparse_mapping_matrix.shape[0]*sparse_mapping_matrix.shape[1]))
 
-    file_name = "grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_weights.h5"
-    np.save_npz(file_name, sparse_mapping_matrix)
+    file_name = "grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_weights.npz"
+    save_npz(file_name, sparse_mapping_matrix)
 
     # SaveWeightingMatrix(N, dx, indices, indptr, data)
 
@@ -383,15 +383,17 @@ def test_interp(N, grid, ll_lat, ll_lon, dx, r):
     the max and mean error of the interpolation.
     """
 
-    file_name = "grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_weights.h5"
+    file_name = "grid_l" + str(N) + "_" + str(int(dx)) + "x" + str(int(dx)) + "_weights.npz"
 
-    f= h5py.File(file_name, 'r')
+    # f= h5py.File(file_name, 'r')
 
-    cols = f["column index"]
-    rows = f["row index"]
-    w    = f["weights"]
+    # cols = f["column index"]
+    # rows = f["row index"]
+    # w    = f["weights"]
 
-    map_matrix = csr_matrix((w, cols, rows), shape=(len(ll_lat)*len(ll_lon), 3*len(grid.nodes)))
+    # map_matrix = csr_matrix((w, cols, rows), shape=(len(ll_lat)*len(ll_lon), 3*len(grid.nodes)))
+
+    map_matrix = load_npz(file_name)
 
     m = 2.
     n = 3.
