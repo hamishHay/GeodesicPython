@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
   double sph[3];
   double r = 1.0;
 
+  // Spherical coords here defined in colatitude!!!
   sph[0] = r; sph[1] = 0.0; sph[2] = 0.0;
   sph2cart(sph, xyz, false);
   Node n0(xyz, 0);
@@ -153,6 +154,8 @@ int main(int argc, char* argv[])
   grid.defineRegion(4, 3, subregion19);
 
   grid.findFriends();
+  grid.orderFriends();
+  // grid.twistGrid();
 
   std::istringstream iss( argv[1] );
   int N;
@@ -167,42 +170,77 @@ int main(int argc, char* argv[])
     std::cout<<std::endl<<"Bisecting edges: recursion level "<< i+1 <<'.'<<std::endl;
     grid.bisectEdges();
   }
-
-
+ 
   grid.orderFriends();
-  // grid.orderNodesByRegion();
   grid.twistGrid();
   grid.orderFriends();
   grid.findCentroids();
   grid.shiftNodes();
 
-  // grid.orderFriends();
-  // // grid.orderNodesByRegion();
-  // grid.twistGrid();
-  // grid.orderFriends();
-  // grid.findCentroids();
-  // grid.shiftNodes();
-  // // grid.orderFriends();
-  // // grid.orderFriends();
-  // // grid.shiftNodes();
+  grid.createVertices();
+  grid.createFaces();
 
-  // grid.orderFriends();
-  // grid.twistGrid();
-  // grid.orderFriends();
-  // grid.findCentroids();
-  // grid.applyBoundary();
-  // grid.refineBoundary();
-  // grid.orderFriends();
-  // grid.shiftNodes();
-  // // grid.orderFriends();
-  // grid.findCentroids();
-  // grid.shiftNodes();
+//   for (int i=0; i<grid.node_list.size(); i++)
+//   {
+//     Node * node = grid.node_list[i];
+//     std::cout<<i<<std::endl;
+//     for (int j=0; j<node->face_list.size(); j++)
+//     {
+//         std::cout<<' '<<node->face_list[j]->length;
+//     }
+//     std::cout<<std::endl;  
+//   }
+
+  grid.calculateProperties();
+
+//   for (int i=0; i<grid.node_list.size(); i++)
+//   {
+//     Node * node = grid.node_list[i];
+//     std::cout<<i<<' '<<node->area<<std::endl;
+//     // for (int j=0; j<node->friends_list.size(); j++)
+//     // {
+//     //     std::cout<<' '<<node->friends_list[j]->ID<<' '<<node->node_dists[j]<<std::endl;;
+//     // }
+//     // std::cout<<std::endl;  
+//   }
+
+    // for (int i=0; i<grid.node_list.size(); i++)
+    // {
+    //     Node * node = grid.node_list[i];
+    //     std::cout<<i<<std::endl;
+    //     for (int j=0; j<node->face_list.size(); j++)
+    //     {
+    //         std::cout<<' '<<node->face_list[j]->ID<<' '<<node->face_list[j]->sph_normal[0]<<' '<<node->face_list[j]->sph_normal[1]<<' '<<node->face_dirs[j]<<std::endl;;
+    //     }
+    //     std::cout<<std::endl;  
+    // }
+
+    // for (int i=0; i<grid.face_list.size(); i++)
+    // {
+    //     Face * face = grid.face_list[i];
+    //     std::cout<<face->ID<<' '<<face->sph_normal[0]<<' '<<face->sph_normal[1]<<std::endl;
+    // }
 
 
-
-  std::cout<<std::endl<<"Grid generated. Total node #: "<<grid.node_list.size()<<std::endl;
+//   std::cout<<std::endl<<"Grid generated. Total node #: "<<grid.node_list.size()<<std::endl;
 
   grid.saveGrid2File();
+  grid.saveGrid2HDF5();
+
+  // To do:
+  // Normal vec direction 
+  // Tangential vec direction
+  // Face friends 
+  // -->Weights for coriolis?
+  
+  // Should I also store distances?
+  // Areas? etc? Or should that be for ODIS to calculate?
+
+  // To do for MPI:
+  // Split domain into parts --> this should probably be a post-process.
+  // Can ODIS successfully read in each part and print out all grid info 
+  // for the non-split case?
+
 
   return 1;
 };
