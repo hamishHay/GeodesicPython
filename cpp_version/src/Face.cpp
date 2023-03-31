@@ -126,6 +126,33 @@ void Face::updateNormalVec(void)
     }
 };
 
+void Face::updateGhosts(void)
+{
+
+
+    if (this->region != n1->region) node_ghost_list.push_back(n1);
+    if (this->region != n2->region) node_ghost_list.push_back(n2);
+
+    if (this->region != v1->region) vertex_ghost_list.push_back(v1);
+    if (this->region != v2->region) vertex_ghost_list.push_back(v2);
+    
+
+    Face * f_friend;
+    for (unsigned i=0; i<this->friends_list1.size(); i++)
+    {
+        f_friend = this->friends_list1[i];
+
+        if (this->region != f_friend->region) face1_ghost_list.push_back(f_friend);
+    }
+
+    for (unsigned i=0; i<this->friends_list2.size(); i++)
+    {
+        f_friend = this->friends_list2[i];
+        if (this->region != f_friend->region) face2_ghost_list.push_back(f_friend);
+    }
+
+}
+
 // NOTE: This function requires each node's face_list to *already* be sorted. 
 void Face::updateFaceFriends(void)
 {

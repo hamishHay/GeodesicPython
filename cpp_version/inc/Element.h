@@ -10,9 +10,9 @@ class Element
   public:
     double xyz_coords[3];     // cartesian coords
     double sph_coords[3];     // spherical coords
-    int ID;                   // ID of element within it's region
-    int RID = 0;              // ID of the region that the element is within
-    int GID;                  // ID of the element globally
+    int ID;                   // Global ID
+    int RID = 0;              // Local ID
+    int region = 0;           // Region that element resides in
 
     // Constructor takes xyz coords, and usually an ID
     Element(int ID_num);

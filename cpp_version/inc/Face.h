@@ -32,6 +32,11 @@ class Face : public Element
 
     Vertex * v1;
     Vertex * v2;
+
+    std::vector<Node *> node_ghost_list;
+    std::vector<Vertex *> vertex_ghost_list;
+    std::vector<Face *> face1_ghost_list;
+    std::vector<Face *> face2_ghost_list;
     
 
     int friend_num;           // number of surrounding friends
@@ -52,6 +57,7 @@ class Face : public Element
     void updateIntersectPos(void);
     void updateIntersectLength(void);
     void updateArea(void);
+    void updateGhosts(void);
 
 };
 

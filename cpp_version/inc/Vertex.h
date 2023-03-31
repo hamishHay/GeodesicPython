@@ -22,6 +22,9 @@ class Vertex : public Element
     std::vector<Node *> node_list = std::vector<Node *> (3);
     std::vector<int> face_dirs = std::vector<int> (3);
 
+    std::vector<Face *> face_ghost_list;
+    std::vector<Node *> node_ghost_list;
+
     int friend_num;           // number of surrounding friends
     double area;
     double subareas[3];
@@ -38,6 +41,7 @@ class Vertex : public Element
     void updateFaceDirs();
     void updateArea();
     void updateSubAreas();
+    void updateGhosts();
 };
 
 #endif

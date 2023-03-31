@@ -142,3 +142,24 @@ void Vertex::updateSubAreas()
     }
 }
 
+void Vertex::updateGhosts()
+{
+    Node * n_friend;
+    for (unsigned i=0; i<this->node_list.size(); i++)
+    {
+        n_friend = this->node_list[i];
+
+        if (this->region != n_friend->region) this->node_ghost_list.push_back(n_friend);
+    }
+
+    Face * f_friend;
+    for (unsigned i=0; i<this->face_list.size(); i++)
+    {
+        f_friend = this->face_list[i];
+
+        if (this->region != f_friend->region) this->face_ghost_list.push_back(f_friend);
+    }
+
+};
+
+

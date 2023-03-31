@@ -24,6 +24,10 @@ class Node : public Element
     std::vector<int> face_dirs;
     std::vector<double> vertex_areas;
 
+    std::vector<Node *> node_ghost_list;
+    std::vector<Face *> face_ghost_list;
+    std::vector<Vertex *> vertex_ghost_list;
+
     std::vector<int> updated = std::vector<int> (6, 0);          // have friends been updated?
 
     std::vector< std::vector<double> > centroids;// = std::vector< std::vector<double> > (6, std::vector<double> (3));
@@ -60,20 +64,7 @@ class Node : public Element
 
     bool hasFace(Face * f);
 
-    // void orderFriends();
-
-    // project current xyz coords onto sphere of radius r
-    // void project2Sphere(double r=1.0);
-
-    // void updateXYZ(const double xyz[]);
-
-    // void transformSph(const double rot);
-
-    // return the coordinates (or copy?) of the Node
-    // double * getCartCoords();
-    // double * getSphCoords();
-    // void getMapCoords(const Node &n, double xy[]);
-    // double getMagnitude();
+    void updateGhosts();
 
     void updateArea();
 

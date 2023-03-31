@@ -743,10 +743,297 @@ void Grid::shiftNodes(void)
 
 };
 
-void Grid::defineRegion(int reg, int subReg, int ID[])
+
+template <typename T>
+bool isInList(T * element, std::vector<T *> &list) {
+    for (unsigned i=0; i<list.size(); i++) {
+
+        // std::cout<<element->ID<<' '<<list[i]->ID<<std::endl;
+        if (element == list[i]) {
+            // std::cout<<std::endl;
+            return true;
+        }
+    }
+    return false;       
+    
+}
+
+// Function to loop through every element and assign a region to it
+void Grid::allocateElementsToRegions(void)
 {
-    for (int i=0; i < 3; i++) regions[reg][subReg][i] = ID[i]; //this->node_list[ID[i]];
-};
+    Node * node;
+    Face * face;
+    Vertex * vertex;
+
+    std::vector<Node *> list1_node;
+    std::vector<Node *> list2_node;
+    std::vector<Face *> list1_face;
+    std::vector<Face *> list2_face;
+    std::vector<Vertex *> list1_vertex;
+    std::vector<Vertex *> list2_vertex;
+
+    // Which regions neighbour each other
+    // I.e. region 0 neigbours regions region_adj[0][:]
+    std::vector< std::vector<int> > region_adj = { {1}, {0} }; 
+
+    // region_node_list.push_back( list1_node );
+    // region_node_list.push_back( list2_node );
+
+    // region_face_list.push_back( list1_face );
+    // region_face_list.push_back( list2_face );
+    
+    // region_vertex_list.push_back( list1_vertex );
+    // region_vertex_list.push_back( list2_vertex );
+
+    for (unsigned i=0; i<node_list.size(); i++) {
+        node = node_list[i];
+
+        // Find which region the node belongs to
+
+        // Basic splitting between north and south hemisphere
+        
+        if (node->sph_coords[1] >= 0.0) {   // North of or at equator
+            node->region = 0;
+            list1_node.push_back(node);
+        }
+        else    {                            // South of equator
+            node->region = 1;
+            list2_node.push_back(node);    
+        }
+
+        
+    }
+    region_node_list.push_back( list1_node );
+    region_node_list.push_back( list2_node );
+
+    for (unsigned i=0; i<face_list.size(); i++) {
+        face = face_list[i];
+
+        if (face->sph_coords[1] >= 0.0) {   // North of or at equator
+            face->region = 0;
+            list1_face.push_back(face);
+        }
+        else    {                            // South of equator
+            face->region = 1;
+            list2_face.push_back(face);    
+        }
+
+        // std::cout<<face->sph_coords[1]<<' '<<face->n1->sph_coords[1]<<' '<<face->n2->sph_coords[1]<<' '<<face->v1->sph_coords[1]<<' '<<face->v2->sph_coords[1]<<std::endl;
+    }
+    region_face_list.push_back( list1_face );
+    region_face_list.push_back( list2_face );
+
+    
+
+
+    for (unsigned i=0; i<vertex_list.size(); i++) {
+        vertex = vertex_list[i];
+
+        if (vertex->sph_coords[1] >= 0.0) {   // North of or at equator
+            vertex->region = 0;
+            list1_vertex.push_back(vertex);
+        }
+        else    {                            // South of equator
+            vertex->region = 1;
+            list2_vertex.push_back(vertex);    
+        }
+    }
+    region_vertex_list.push_back( list1_vertex );
+    region_vertex_list.push_back( list2_vertex );
+
+    for (unsigned k=0; k<region_node_list.size(); k++) {
+        std::vector<Node *> current_node_list = region_node_list[k];
+
+        // Each node needs to find if it neighbours any ghosts
+        for (unsigned i=0; i<current_node_list.size(); i++) {
+            Node * node = current_node_list[i];
+
+            node->RID = i;          // Give the node a local ID
+            node->updateGhosts();
+
+            // if (node->node_ghost_list.size() != 0) std::cout<<"Node "<<node->ID<<" has ghosts";
+            // for (unsigned j=0; j<node->node_ghost_list.size(); j++)
+            //      std::cout<<' '<<node->node_ghost_list[j]->ID;
+            // if (node->node_ghost_list.size() != 0) std::cout<<std::endl;
+        }
+    }
+    
+    for (unsigned k=0; k<region_face_list.size(); k++) {
+        std::vector<Face *> current_face_list = region_face_list[k];
+
+        // Each face needs to find if it neighbours any ghosts
+        for (unsigned i=0; i<current_face_list.size(); i++) {
+            face = current_face_list[i];
+
+            face->RID = i;          // Give the face a local ID
+            face->updateGhosts();
+
+            // if (face->node_ghost_list.size() != 0) std::cout<<"Face "<<face->ID<<" in region "<<k<<" has ghosts";
+            // for (unsigned j=0; j<face->node_ghost_list.size(); j++)
+            //      std::cout<<' '<<face->node_ghost_list[j]->ID<<" at lat "<<face->node_ghost_list[j]->sph_coords[1]<<", ";
+            // if (face->node_ghost_list.size() != 0) std::cout<<std::endl;
+        }
+    }
+
+    for (unsigned k=0; k<region_vertex_list.size(); k++) {
+        std::vector<Vertex *> current_vertex_list = region_vertex_list[k];
+
+        // Each vertex needs to find if it neighbours any ghosts
+        for (unsigned i=0; i<current_vertex_list.size(); i++) {
+            vertex = current_vertex_list[i];
+
+            vertex->RID = i;        // Give the vertex a local ID
+            vertex->updateGhosts();
+        }
+    }
+
+    // for (unsigned k1=0; k1<region_adj.size(); k1++) {           // Region
+    //     for (unsigned k2=0; k2<region_adj[k1].size(); k2++) {   // Neighouring region
+    //         std::vector<Node *> current_node_ghost_list;
+    //         std::vector<Node *> current_node_list = region_node_list[k2];
+
+    //         Node * node;
+    //         for (unsigned i=0; i<current_node_list.size(); i++) {
+    //             node = current_node_list[i];
+    //             if (node->region == k1) current_node_ghost_list.push_back(node);
+    //         }
+    //     }
+    // }
+
+    // Loop over each region
+    for (unsigned k=0; k<region_node_list.size(); k++) {
+        std::vector<Node *> current_node_list = region_node_list[k];
+        std::vector<Face *> current_face_list = region_face_list[k];
+        std::vector<Vertex *> current_vertex_list = region_vertex_list[k];
+        std::vector<Node *> current_node_ghost_list;
+        std::vector<Face *> current_face_ghost_list;
+        std::vector<Vertex *> current_vertex_ghost_list;
+
+        // Each node needs to find if it neighbours any ghosts
+        for (unsigned i=0; i<current_node_list.size(); i++) {
+            Node * node = current_node_list[i];
+         
+            // Add ghost nodes that are adjacent to nodes
+            for (unsigned j=0; j<node->node_ghost_list.size(); j++) {
+                Node * node_to_add = node->node_ghost_list[j];
+
+                if (!isInList<Node>(node_to_add, current_node_ghost_list)) 
+                    current_node_ghost_list.push_back(node_to_add);
+            }
+
+            for (unsigned j=0; j<node->face_ghost_list.size(); j++) {
+                Face * face_to_add = node->face_ghost_list[j];
+
+                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
+                    current_face_ghost_list.push_back(face_to_add);
+            }
+
+            for (unsigned j=0; j<node->vertex_ghost_list.size(); j++) {
+                Vertex * vertex_to_add = node->vertex_ghost_list[j];
+
+                if (!isInList<Vertex>(vertex_to_add, current_vertex_ghost_list)) 
+                    current_vertex_ghost_list.push_back(vertex_to_add);
+            }
+        }
+        
+        for (unsigned i=0; i<current_face_list.size(); i++) {
+            Face * face = current_face_list[i];
+            // std::cout<<k<<' '<<face->sph_coords[1]<<std::endl;
+         
+            Node * node_to_add;
+            for (unsigned j=0; j<face->node_ghost_list.size(); j++)
+            {
+                // std::cout<<"   "<<face->node_ghost_list[j]->region<<std::endl;
+                node_to_add = face->node_ghost_list[j];
+                if (!isInList<Node>(node_to_add, current_node_ghost_list)) 
+                    current_node_ghost_list.push_back(node_to_add);
+            }
+
+            for (unsigned j=0; j<face->face1_ghost_list.size(); j++) {
+                Face * face_to_add = face->face1_ghost_list[j];
+
+                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
+                    current_face_ghost_list.push_back(face_to_add);
+            }
+
+            for (unsigned j=0; j<face->face2_ghost_list.size(); j++) {
+                Face * face_to_add = face->face2_ghost_list[j];
+
+                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
+                    current_face_ghost_list.push_back(face_to_add);
+            }
+
+            for (unsigned j=0; j<face->vertex_ghost_list.size(); j++) {
+                Vertex * vertex_to_add = face->vertex_ghost_list[j];
+
+                if (!isInList<Vertex>(vertex_to_add, current_vertex_ghost_list)) 
+                    current_vertex_ghost_list.push_back(vertex_to_add);
+            }
+        }
+
+        for (unsigned i=0; i<current_vertex_list.size(); i++) {
+            Vertex * vertex = current_vertex_list[i];
+            // std::cout<<k<<' '<<vertex->sph_coords[1]<<std::endl;
+         
+
+            // for (unsigned j=0; j<vertex->vertex_ghost_list.size(); j++) {
+            //     Vertex * vertex_to_add = vertex->vertex_ghost_list[j];
+
+            //     if (!isInList<Vertex>(vertex_to_add, current_vertex_ghost_list)) 
+            //         current_vertex_ghost_list.push_back(vertex_to_add);
+            // }
+
+            Node * node_to_add;
+            for (unsigned j=0; j<vertex->node_ghost_list.size(); j++)
+            {
+                // std::cout<<"   "<<vertex->node_ghost_list[j]->region<<std::endl;
+                node_to_add = vertex->node_ghost_list[j];
+                if (!isInList<Node>(node_to_add, current_node_ghost_list)) 
+                    current_node_ghost_list.push_back(node_to_add);
+            }
+
+            for (unsigned j=0; j<vertex->face_ghost_list.size(); j++) {
+                Face * face_to_add = vertex->face_ghost_list[j];
+
+                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
+                    current_face_ghost_list.push_back(face_to_add);
+            }
+        }
+
+        region_node_ghost_list.push_back( current_node_ghost_list );
+        region_face_ghost_list.push_back( current_face_ghost_list );
+    }
+
+    // for (int k=0; k<region_node_ghost_list.size(); k++) {
+    //     std::vector<Node *> current_list = region_node_ghost_list[k];
+    //     for (unsigned i=0; i<current_list.size(); i++)
+    //     {
+    //         std::cout<<"Region "<<k<<" has ghost node "<<current_list[i]->ID<<std::endl;
+    //     }
+    // }
+
+    // for (int k=0; k<region_face_ghost_list.size(); k++) {
+    //     std::vector<Face *> current_list = region_face_ghost_list[k];
+    //     for (unsigned i=0; i<current_list.size(); i++)
+    //     {
+    //         std::cout<<"Region "<<k<<" has ghost face "<<current_list[i]->ID<<std::endl;
+    //     }
+    // }
+
+    std::cout<<region_node_list[0].size()<<' '<<region_node_list[1].size()<<std::endl;
+    std::cout<<region_node_ghost_list[0].size()<<' '<<region_node_ghost_list[1].size()<<std::endl;
+
+    std::cout<<std::endl;
+
+    std::cout<<region_face_list[0].size()<<' '<<region_face_list[1].size()<<std::endl;
+    std::cout<<region_face_ghost_list[0].size()<<' '<<region_face_ghost_list[1].size()<<std::endl;
+    
+}
+
+// void Grid::defineRegion(int reg, int subReg, int ID[])
+// {
+//     for (int i=0; i < 3; i++) regions[reg][subReg][i] = ID[i]; //this->node_list[ID[i]];
+// };
 
 void Grid::findCentroids(void)
 {

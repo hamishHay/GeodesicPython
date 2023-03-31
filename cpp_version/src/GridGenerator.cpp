@@ -128,30 +128,30 @@ int main(int argc, char* argv[])
   grid.addNode(&n10);
   grid.addNode(&n11);
 
-  grid.defineRegion(0, 0, subregion0);
-  grid.defineRegion(0, 1, subregion1);
-  grid.defineRegion(0, 2, subregion2);
-  grid.defineRegion(0, 3, subregion3);
+//   grid.defineRegion(0, 0, subregion0);
+//   grid.defineRegion(0, 1, subregion1);
+//   grid.defineRegion(0, 2, subregion2);
+//   grid.defineRegion(0, 3, subregion3);
 
-  grid.defineRegion(1, 0, subregion4);
-  grid.defineRegion(1, 1, subregion5);
-  grid.defineRegion(1, 2, subregion6);
-  grid.defineRegion(1, 3, subregion7);
+//   grid.defineRegion(1, 0, subregion4);
+//   grid.defineRegion(1, 1, subregion5);
+//   grid.defineRegion(1, 2, subregion6);
+//   grid.defineRegion(1, 3, subregion7);
 
-  grid.defineRegion(2, 0, subregion8);
-  grid.defineRegion(2, 1, subregion9);
-  grid.defineRegion(2, 2, subregion10);
-  grid.defineRegion(2, 3, subregion11);
+//   grid.defineRegion(2, 0, subregion8);
+//   grid.defineRegion(2, 1, subregion9);
+//   grid.defineRegion(2, 2, subregion10);
+//   grid.defineRegion(2, 3, subregion11);
 
-  grid.defineRegion(3, 0, subregion12);
-  grid.defineRegion(3, 1, subregion13);
-  grid.defineRegion(3, 2, subregion14);
-  grid.defineRegion(3, 3, subregion15);
+//   grid.defineRegion(3, 0, subregion12);
+//   grid.defineRegion(3, 1, subregion13);
+//   grid.defineRegion(3, 2, subregion14);
+//   grid.defineRegion(3, 3, subregion15);
 
-  grid.defineRegion(4, 0, subregion16);
-  grid.defineRegion(4, 1, subregion17);
-  grid.defineRegion(4, 2, subregion18);
-  grid.defineRegion(4, 3, subregion19);
+//   grid.defineRegion(4, 0, subregion16);
+//   grid.defineRegion(4, 1, subregion17);
+//   grid.defineRegion(4, 2, subregion18);
+//   grid.defineRegion(4, 3, subregion19);
 
   grid.findFriends();
   grid.orderFriends();
@@ -192,6 +192,8 @@ int main(int argc, char* argv[])
 //   }
 
   grid.calculateProperties();
+
+//   grid.allocateElementsToRegions();
 
 //   for (int i=0; i<grid.node_list.size(); i++)
 //   {

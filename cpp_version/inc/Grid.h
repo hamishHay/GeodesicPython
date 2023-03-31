@@ -48,15 +48,29 @@ public:
   std::vector<Node*> node_list;
   std::vector<Face*> face_list;
   std::vector<Vertex*> vertex_list;
-  std::vector<std::vector< std::vector<int> > > regions
-    = std::vector< std::vector< std::vector< int > > > (5, std::vector<std::vector< int>> (4, std::vector<int> (3) ) );
 
-  std::vector<std::vector< int > > inside_region
-    = std::vector< std::vector< int > > (5);
+  // Nodes, faces and vertices that lie in each region
+  std::vector< std::vector< Node *> > region_node_list;
+  std::vector< std::vector< Face *> > region_face_list;
+  std::vector< std::vector< Vertex *> > region_vertex_list;
+
+
+  // Nodes, faces and vertices that neighbour, but do not lie
+  // in, each region
+  std::vector< std::vector< Node *> > region_node_ghost_list;
+  std::vector< std::vector< Face *> > region_face_ghost_list;
+  std::vector< std::vector< Vertex *> > region_vertex_ghost_list;
+//   std::vector<std::vector< std::vector<int> > > regions
+    // = std::vector< std::vector< std::vector< int > > > (5, std::vector<std::vector< int>> (4, std::vector<int> (3) ) );
+
+//   std::vector<std::vector< int > > inside_region
+//     = std::vector< std::vector< int > > (5);
 
   void addNode(Node * n);
 
-  void defineRegion(int, int, int []);
+//   void defineRegion(std::vector< std::vector<double> >);
+
+  void allocateElementsToRegions(void);
 
   void findFriends(void);
 

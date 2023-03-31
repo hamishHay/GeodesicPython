@@ -106,6 +106,34 @@ void Node::addTempFriend(Node * n)
     temp_friends.push_back(n);
 }
 
+
+void Node::updateGhosts(void)
+{
+    Node * n_friend;
+    for (unsigned i=0; i<this->friends_list.size(); i++)
+    {
+        n_friend = this->friends_list[i];
+
+        if (this->region != n_friend->region) node_ghost_list.push_back(n_friend);
+    }
+
+    Face * f_friend;
+    for (unsigned i=0; i<this->face_list.size(); i++)
+    {
+        f_friend = this->face_list[i];
+
+        if (this->region != f_friend->region) face_ghost_list.push_back(f_friend);
+    }
+
+    Vertex * v_friend;
+    for (unsigned i=0; i<this->vertex_list.size(); i++)
+    {
+        v_friend = this->vertex_list[i];
+
+        if (this->region != v_friend->region) vertex_ghost_list.push_back(v_friend);
+    }
+}
+
 void Node::orderVertexList(void)
 {
     unsigned vert_num = this->vertex_list.size();
