@@ -1840,7 +1840,6 @@ void Grid::saveGrid2HDF5(void)
         int count=0;
         for (unsigned i=0; i<NODE_NUM_NG; i++) {
             for (unsigned j=0; j<r_node_list[i]->vertex_list.size(); j++) {
-                // node_v_ID->data[count] = r_node_list[i]->vertex_list[j]->RID;
                 node_v_ID->data[count] = r_node_list[i]->vertex_list[j]->region_ID[k];
                 count++;
             }
@@ -1872,7 +1871,6 @@ void Grid::saveGrid2HDF5(void)
         count=0;
         for (unsigned i=0; i<NODE_NUM_NG; i++) {
             for (unsigned j=0; j<r_node_list[i]->face_list.size(); j++) {
-                // node_f_ID->data[count] = r_node_list[i]->face_list[j]->RID;
                 node_f_ID->data[count] = r_node_list[i]->face_list[j]->region_ID[k];
                 count++; }}
 
@@ -1904,7 +1902,6 @@ void Grid::saveGrid2HDF5(void)
         count=0;
         for (unsigned i=0; i<NODE_NUM_NG; i++) {
             for (unsigned j=0; j<r_node_list[i]->friends_list.size(); j++) {
-                // node_n_ID->data[count] = r_node_list[i]->friends_list[j]->RID;
                 node_n_ID->data[count] = r_node_list[i]->friends_list[j]->region_ID[k];
                 count++; }}
 
@@ -1929,8 +1926,6 @@ void Grid::saveGrid2HDF5(void)
         delete node_n_fnum;
 
 
-
-        
         // INTERCONNECTIVITY FOR FACES ----------------------------------------------------------------------
         hid_t face_group_f = H5Gcreate(face_group, "FRIENDS", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         
@@ -1941,8 +1936,6 @@ void Grid::saveGrid2HDF5(void)
         hid_t face_group_f_n = H5Gcreate(face_group_f, "NODES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         h5DataArray<unsigned> * face_n_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
         for (unsigned i=0; i<FACE_NUM_NG; i++) {
-            // face_n_ID->data[2*i]     = r_face_list[i]->n1->RID;
-            // face_n_ID->data[2*i + 1] = r_face_list[i]->n2->RID;
             face_n_ID->data[2*i]     = r_face_list[i]->n1->region_ID[k];
             face_n_ID->data[2*i + 1] = r_face_list[i]->n2->region_ID[k]; }
 
@@ -1953,8 +1946,6 @@ void Grid::saveGrid2HDF5(void)
         hid_t face_group_f_v = H5Gcreate(face_group_f, "VERTICES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         h5DataArray<unsigned> * face_v_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
         for (unsigned i=0; i<FACE_NUM_NG; i++) {
-            // face_v_ID->data[2*i]     = r_face_list[i]->v1->RID;
-            // face_v_ID->data[2*i + 1] = r_face_list[i]->v2->RID;
             face_v_ID->data[2*i]     = r_face_list[i]->v1->region_ID[k];
             face_v_ID->data[2*i + 1] = r_face_list[i]->v2->region_ID[k]; }
 
@@ -1976,21 +1967,12 @@ void Grid::saveGrid2HDF5(void)
         saveToHDF5Group(&face_group_f_f1, face_f1_ID, "ID");
         delete face_f1_ID;
 
-        // std::cout<<FRIENDS_NUM<<std::endl;
         h5DataArray<double> * face_f1_weight = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
         count = 0;
         for (unsigned i=0; i<FACE_NUM_NG; i++) {
             for (unsigned j=0; j<r_face_list[i]->friends_list1.size(); j++) {
                 face_f1_weight->data[count] = r_face_list[i]->weights1[j];
                 count++; }}
-
-        // count = 0;
-        // for (unsigned i=0; i<FACE_NUM_NG; i++) {
-        //     for (unsigned j=0; j<r_face_list[i]->friends_list1.size(); j++) {
-        //         std::cout<<face_f1_weight->data[count]<<std::endl;
-        //         count++; }}
-        // std::cout<<face_f1_weight->size<<std::endl;
-        // std::cout<<count-1<<std::endl;
 
         saveToHDF5Group(&face_group_f_f1, face_f1_weight, "WEIGHTS");
         delete face_f1_weight;
@@ -2108,12 +2090,28 @@ void Grid::saveWholeGrid2HDF5(void)
     unsigned NODE_NUM = node_list.size();
     unsigned VERTEX_NUM = vertex_list.size();
 
+    unsigned FACE_NUM_NG = FACE_NUM;
+    unsigned NODE_NUM_NG = NODE_NUM;
+    unsigned VERTEX_NUM_NG = VERTEX_NUM;
+
     hid_t file = H5Fcreate(dataFile, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
 
 
     // SAVE FACE INFO -------------------------------------------------------------------
     hid_t face_group = H5Gcreate(file, "FACES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    hid_t aid2  = H5Screate(H5S_SCALAR);
+    hid_t attr2 = H5Acreate2(face_group, "FACE_NUM", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+    hid_t ret = H5Awrite(attr2, H5T_NATIVE_UINT, &FACE_NUM);
+    H5Aclose(attr2);
+    H5Sclose(aid2);
+
+    aid2  = H5Screate(H5S_SCALAR);
+    attr2 = H5Acreate2(face_group, "FACE_NUM_NO_GHOSTS", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+    ret = H5Awrite(attr2, H5T_NATIVE_UINT, &FACE_NUM_NG);
+    H5Aclose(attr2);
+    H5Sclose(aid2);
 
     // std::cout<<H5::PredType::NATIVE_UINT<<std::endl;
     h5DataArray<unsigned> * face_ID = new h5DataArray<unsigned>(FACE_NUM, H5T_NATIVE_UINT);
@@ -2172,6 +2170,18 @@ void Grid::saveWholeGrid2HDF5(void)
     // SAVE NODE INFO -------------------------------------------------------------------
     hid_t node_group = H5Gcreate(file, "NODES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
+    aid2  = H5Screate(H5S_SCALAR);
+    attr2 = H5Acreate2(node_group, "NODE_NUM", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+    ret = H5Awrite(attr2, H5T_NATIVE_UINT, &NODE_NUM);
+    H5Aclose(attr2);
+    H5Sclose(aid2);
+
+    aid2  = H5Screate(H5S_SCALAR);
+    attr2 = H5Acreate2(node_group, "NODE_NUM_NO_GHOSTS", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+    ret = H5Awrite(attr2, H5T_NATIVE_UINT, &NODE_NUM_NG);
+    H5Aclose(attr2);
+    H5Sclose(aid2);
+
     h5DataArray<unsigned> * node_ID = new h5DataArray<unsigned>(NODE_NUM, H5T_NATIVE_UINT);
     for (unsigned i=0; i<NODE_NUM; i++) node_ID->data[i] = node_list[i]->ID;
     saveToHDF5Group(&node_group, node_ID, "ID");
@@ -2196,6 +2206,18 @@ void Grid::saveWholeGrid2HDF5(void)
 
     // SAVE VERTEX INFO -------------------------------------------------------------------
     hid_t vertex_group = H5Gcreate(file, "VERTICES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+    aid2  = H5Screate(H5S_SCALAR);
+    attr2 = H5Acreate2(vertex_group, "VERTEX_NUM", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+    ret = H5Awrite(attr2, H5T_NATIVE_UINT, &VERTEX_NUM);
+    H5Aclose(attr2);
+    H5Sclose(aid2);
+
+    aid2  = H5Screate(H5S_SCALAR);
+    attr2 = H5Acreate2(vertex_group, "VERTEX_NUM_NO_GHOSTS", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+    ret = H5Awrite(attr2, H5T_NATIVE_UINT, &VERTEX_NUM_NG);
+    H5Aclose(attr2);
+    H5Sclose(aid2);
 
     h5DataArray<unsigned> * vertex_ID = new h5DataArray<unsigned>(VERTEX_NUM, H5T_NATIVE_UINT);
     for (unsigned i=0; i<VERTEX_NUM; i++) vertex_ID->data[i] = vertex_list[i]->ID;
@@ -2360,6 +2382,16 @@ void Grid::saveWholeGrid2HDF5(void)
     saveToHDF5Group(&face_group_f_f1, face_f1_ID, "ID");
     delete face_f1_ID;
 
+    h5DataArray<double> * face_f1_weight = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+    count = 0;
+    for (unsigned i=0; i<FACE_NUM; i++) {
+        for (unsigned j=0; j<face_list[i]->friends_list1.size(); j++) {
+            face_f1_weight->data[count] = face_list[i]->weights1[j];
+            count++; }}
+
+    saveToHDF5Group(&face_group_f_f1, face_f1_weight, "WEIGHTS");
+    delete face_f1_weight;
+
     FRIENDS_NUM=0;
     for (unsigned i=0; i<FACE_NUM; i++) FRIENDS_NUM += face_list[i]->friends_list2.size();
 
@@ -2373,6 +2405,17 @@ void Grid::saveWholeGrid2HDF5(void)
 
     saveToHDF5Group(&face_group_f_f2, face_f2_ID, "ID");
     delete face_f2_ID;
+
+
+    h5DataArray<double> * face_f2_weight = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+    count = 0;
+    for (unsigned i=0; i<FACE_NUM; i++) {
+        for (unsigned j=0; j<face_list[i]->friends_list2.size(); j++) {
+            face_f2_weight->data[count] = face_list[i]->weights2[j];
+            count++; }}
+
+    saveToHDF5Group(&face_group_f_f2, face_f2_weight, "WEIGHTS");
+    delete face_f2_weight;
 
     // FACES_NUM-->FACES
     h5DataArray<unsigned> * face_f1_fnum = new h5DataArray<unsigned>(FACE_NUM, H5T_NATIVE_UINT);
@@ -2414,6 +2457,15 @@ void Grid::saveWholeGrid2HDF5(void)
         
     saveToHDF5Group(&vertex_group_f_n, vertex_n_area, "SUBAREA");
     delete vertex_n_area;
+
+    h5DataArray<double> * vertex_n_weight = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+    for (unsigned i=0; i<VERTEX_NUM; i++) {
+        vertex_n_weight->data[3*i]     = vertex_list[i]->interp_weights[0];
+        vertex_n_weight->data[3*i + 1] = vertex_list[i]->interp_weights[1];
+        vertex_n_weight->data[3*i + 2] = vertex_list[i]->interp_weights[2]; }
+        
+    saveToHDF5Group(&vertex_group_f_n, vertex_n_weight, "WEIGHT");
+    delete vertex_n_weight;
 
     // FACES-->VERTICES
     hid_t vertex_group_f_f = H5Gcreate(vertex_group_f, "FACES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
