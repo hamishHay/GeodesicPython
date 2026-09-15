@@ -27,6 +27,8 @@ class Face : public Element
 
     std::vector<Face *> friends_list1;
     std::vector<Face *> friends_list2;
+    std::vector<double> weights1;
+    std::vector<double> weights2;
     Node * n1;
     Node * n2;
 
@@ -58,6 +60,7 @@ class Face : public Element
     void updateIntersectLength(void);
     void updateArea(void);
     void updateGhosts(void);
+    void updateInterpolationWeights(void);
 
 };
 

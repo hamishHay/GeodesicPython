@@ -35,9 +35,9 @@ struct AngleSort{
 
         det = v1[0]*v2[1] - v1[1]*v2[0];
 
-        // this->ang = atan2(dot_prod, det)*180./pi;
+        // this->ang = atan2(dot_prod, det)*180./_PI;
 
-        double angle = atan2(det, dot_prod)*180./pi;
+        double angle = atan2(det, dot_prod)*180./_PI;
         if (angle < 0.0) angle += 360.0;
         this->ang = angle;
     };
@@ -271,6 +271,31 @@ void Node::updateFaceDirs(void)
         else dir = -1;
 
         this->face_dirs.push_back(dir);
+
+        // if (dir == 1) {
+        //     Node * f_n1 = face->n1;
+        //     Node * f_n2 = face->n2;
+
+        //     // Reverse order node storage so that 
+        //     // n1 is the upwind node and n2 is the 
+        //     // downwind node
+        //     if (f_n2 == this) {
+        //         face->n1 = f_n2;
+        //         face->n2 = f_n1;
+        //     }
+        // }
+        // else {
+        //     Node * f_n1 = face->n1;
+        //     Node * f_n2 = face->n2;
+
+        //     // Reverse order node storage so that 
+        //     // n1 is the upwind node and n2 is the 
+        //     // downwind node
+        //     if (f_n1 == this) {
+        //         face->n1 = f_n2;
+        //         face->n2 = f_n1;
+        //     }
+        // }
     }
 };
 
@@ -335,7 +360,7 @@ Node & Node::operator=(const Node &other_node)
 
   // Maybe we shouldn't do this here?
   cart2sph(xyz_coords, sph_coords);
-  // sph_coords[1] = pi*0.5 - sph_coords[1];
+  // sph_coords[1] = _PI*0.5 - sph_coords[1];
 
   return *this;
 }

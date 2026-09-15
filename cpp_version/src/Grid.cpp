@@ -2,8 +2,10 @@
 #include "Face.h"
 #include "Vertex.h"
 #include "Grid.h"
+#include "Region.h"
 #include "math_functions.h"
 #include "H5Cpp.h"
+// #include <Eigen/Sparse>
 
 #include <iostream>
 #include <vector>
@@ -12,6 +14,8 @@
 #include <string>
 #include <cstring>
 #include <filesystem>
+#include <typeinfo>  
+
 
 template<typename T>
 void Grid::saveToHDF5Group(hid_t * group, h5DataArray<T> * data, char const *name)
@@ -120,7 +124,7 @@ void Grid::findFriends(void)
 
     //     det = v1[0]*v2[1] - v1[1]*v2[0];
 
-    //     ordered_friends[j].ang = atan2(dot_prod, det)*180./pi;
+    //     ordered_friends[j].ang = atan2(dot_prod, det)*180./_PI;
 
     //     ordered_friends[j].node = node_friend;
     //   }
@@ -256,8 +260,8 @@ void Grid::twistGrid(void)
     int i, j, k, g;
     Node * node, *node_friend, *node_friend2;
     double c1[3] = {0.0, 0.0, 0.0};
-    double max_dist = pi/180. * 30.;
-    double rot_angle = pi/5.;
+    double max_dist = _PI/180. * 30.;
+    double rot_angle = _PI/5.;
     double tol=1.2;
 
     std::vector< int > interior_nodes;
@@ -320,7 +324,7 @@ void Grid::twistGrid(void)
                 count++;
             }
 
-            // std::cout<<nodeA->sph_coords[1]*180./pi<<std::endl;
+            // std::cout<<nodeA->sph_coords[1]*180./_PI<<std::endl;
             for (j=0; j<node_list.size(); j++)
             {
                 Node * nodeB = this->node_list[j];
@@ -365,7 +369,7 @@ void Grid::applyBoundary(void)
     Node * node, *node_friend, *node_friend2;
     double c1[3] = {0.0, 0.0, 0.0};
     double dist = 0.0;
-    double max_dist = pi/180. * 30.;
+    double max_dist = _PI/180. * 30.;
 
     std::vector< int > interior_nodes;
 
@@ -419,7 +423,7 @@ void Grid::refineBoundary(void)
     double mag;
     Node * node, * next_node, * last_node, * first_node;
     int bnum = 301;
-    double boundary_angle = pi/180. * 30.;
+    double boundary_angle = _PI/180. * 30.;
     std::vector<Node *> boundary_nodes;
     std::vector<double> ang_diff;
 
@@ -585,10 +589,10 @@ void Grid::refineBoundary(void)
              lnode_sph[k] = node->friends_list[indx-1]->sph_coords[k];
              rnode_sph[k] = node->friends_list[indx+1]->sph_coords[k];
            }
-           // cnode_sph[1] = pi*0.5 - cnode_sph[1];
-           // inode_sph[1] = pi*0.5 - inode_sph[1];
-           // lnode_sph[1] = pi*0.5 - lnode_sph[1];
-           // rnode_sph[1] = pi*0.5 - rnode_sph[1];
+           // cnode_sph[1] = _PI*0.5 - cnode_sph[1];
+           // inode_sph[1] = _PI*0.5 - inode_sph[1];
+           // lnode_sph[1] = _PI*0.5 - lnode_sph[1];
+           // rnode_sph[1] = _PI*0.5 - rnode_sph[1];
 
 
            double l_area, r_area;
@@ -652,6 +656,7 @@ void Grid::shiftNodes(void)
     double sph1[3], sph2[3], sph3[3];
     double xy1[3], xy2[3], xy3[3];
     double xy_new_center[3];
+    double xy_new_center2[node_list.size()][3];
     double areas[6];
     std::vector<std::vector<double>> shifted_xyz(node_list.size(), std::vector<double> (3));
     double residual = 1.0;
@@ -668,46 +673,46 @@ void Grid::shiftNodes(void)
         // update old node
         // call find centroid function
 
-    
-    iter = 0;
-    findCentroids();
-    std::cout<<std::endl<<std::endl;
+        iter = 0;
+    // findCentroids();
+
+    for (unsigned i=0; i<node_list.size(); i++)
+    {
+        xy_new_center2[i][0] = node_list[i]->xyz_coords[0];
+        xy_new_center2[i][1] = node_list[i]->xyz_coords[1];
+        xy_new_center2[i][2] = node_list[i]->xyz_coords[2];
+    }
+
     while (residual > 1e-12)// && residual > e_converge)//(residual > e_converge)
     {
         // residual_old = residual;
         residual = 0.0;
+        // #pragma omp parallel for reduction(+:residual)
         for (unsigned i=0; i<node_list.size(); i++)
         {
             node1 = this->node_list[i];
-            if (node1->boundary == 0)
-            {
-                // std::cout<<node1->ID<<' '<<node1->boundary<<std::endl;
+            // if (node1->boundary == 0)
+            // {
+               
                 for (unsigned k=0; k<3; k++) {
-                    sph1[k] = node1->sph_coords[k];    //latitude
+                    // sph1[k] = node1->sph_coords[k];    //latitude
                     xy1[k] = node1->xyz_coords[k];
+                    // xy1[k] = xy_new_center2[i][k];
                 }
 
                 xy_new_center[0] = 0.0;
                 xy_new_center[1] = 0.0;
                 xy_new_center[2] = 0.0;
 
-                for (unsigned j=0; j<node1->friends_list.size(); j++)
+                for (unsigned j=0; j<node1->vertex_list.size(); j++)
                 {
                     for (unsigned k=0; k<3; k++)
                     {
-                        sph2[k] = node1->centroids[j][k];
-                        sph3[k] = node1->centroids[(j+1)%node1->friends_list.size()][k];
-                        // std::cout<<node1->ID<<' '<<sph3[k]*180./pi<<' '<<sph3[k]*180./pi<<std::endl;
-                    }
+                        xy2[k] = node1->vertex_list[j]->xyz_coords[k];
+                        xy3[k] = node1->vertex_list[(j+1)%node1->vertex_list.size()]->xyz_coords[k];
+                    } 
 
-                    areas[j] = sphericalArea(sph1, sph2, sph3);
-
-                    // Convert to colat
-                    sph2[1] = pi*0.5 - sph2[1];
-                    sph3[1] = pi*0.5 - sph3[1];
-
-                    sph2cart(sph2, xy2);
-                    sph2cart(sph3, xy3);
+                    areas[j] = sphericalArea2(xy1, xy2, xy3); 
 
                     for (unsigned k=0; k<3; k++)
                         xy_new_center[k] += areas[j]*(xy1[k] + xy2[k] + xy3[k]);
@@ -723,40 +728,90 @@ void Grid::shiftNodes(void)
 
                     r += (xy_new_center[k] - xy1[k])*(xy_new_center[k] - xy1[k]);
                 }
-                // r = sqrt(r);
 
                 residual += r;//*r;
-                // node1 = this->node_list[i];
-                node1->updateXYZ(xy_new_center);
-            }
+        
+                node1->updateXYZ(xy_new_center, false);
+
+                xy_new_center2[i][0] = xy_new_center[0];
+                xy_new_center2[i][1] = xy_new_center[1];
+                xy_new_center2[i][2] = xy_new_center[2];
+            // }
         }
 
+        for (unsigned i=0; i<vertex_list.size(); i++) {
+           vertex_list[i]->updatePosition(false);
 
+        }
+        
         std::cout<<'\r'<<iter<<'\t'<<residual<<"   ";
 
-        this->findCentroids();
-
         iter += 1;
+
+
     }
 
-    std::cout<<std::endl;
+    for (unsigned i=0; i<vertex_list.size(); i++) {
+        vertex_list[i]->updatePosition();
+    }
+    for (unsigned i=0; i<node_list.size(); i++) {
+        // node_list[i]->updateXYZ(&xy_new_center2[i][0]);
+        node_list[i]->updateXYZ(node_list[i]->xyz_coords);
+    }
 
 };
 
+template<typename T>
+void Grid::reduceBandwidth(std::vector<T *> &list)
+{
+    T * element;
+    std::vector<T *> R;
+    std::vector<T *> Q;
 
-template <typename T>
-bool isInList(T * element, std::vector<T *> &list) {
-    for (unsigned i=0; i<list.size(); i++) {
-
-        // std::cout<<element->ID<<' '<<list[i]->ID<<std::endl;
-        if (element == list[i]) {
-            // std::cout<<std::endl;
-            return true;
-        }
-    }
-    return false;       
+    R.push_back(list[0]);
+    Q.push_back(list[0]);
+    list[0]->reordered = true;
     
-}
+
+    for (unsigned j=0; j<list[0]->friends_list.size(); j++) {
+        element = list[0]->friends_list[j];
+        if (element->region == list[0]->region) Q.push_back(element);
+    }
+
+
+
+    while (R.size()<list.size()) {
+        element = Q[0];
+
+        if (!element->reordered) {
+            R.push_back(element);
+            element->reordered = true;
+            Q.erase(Q.begin());
+
+            for (unsigned j=0; j<element->friends_list.size(); j++) {
+                T * element2 = element->friends_list[j];
+                if (element->region == element2->region) Q.push_back(element2);
+            }
+
+        }
+        else {
+            Q.erase(Q.begin());
+        }
+
+        // std::cout<<Q.size()<<' '<<R.size()<<' '<<list.size()<<std::endl;
+    }
+
+    for (unsigned i=0; i<R.size(); i++) {
+        list[i] = R[R.size()-1-i];
+        list[i]->ID = i;
+        list[i]->reordered = false;
+    }
+};
+
+void Grid::addRegion(Region * region){
+    region_list.push_back(region);
+    region->printCoords();
+};
 
 // Function to loop through every element and assign a region to it
 void Grid::allocateElementsToRegions(void)
@@ -764,82 +819,84 @@ void Grid::allocateElementsToRegions(void)
     Node * node;
     Face * face;
     Vertex * vertex;
+    
 
-    std::vector<Node *> list1_node;
-    std::vector<Node *> list2_node;
-    std::vector<Face *> list1_face;
-    std::vector<Face *> list2_face;
-    std::vector<Vertex *> list1_vertex;
-    std::vector<Vertex *> list2_vertex;
+    unsigned reg_num = region_list.size();
 
     // Which regions neighbour each other
     // I.e. region 0 neigbours regions region_adj[0][:]
     std::vector< std::vector<int> > region_adj = { {1}, {0} }; 
 
-    // region_node_list.push_back( list1_node );
-    // region_node_list.push_back( list2_node );
-
-    // region_face_list.push_back( list1_face );
-    // region_face_list.push_back( list2_face );
-    
-    // region_vertex_list.push_back( list1_vertex );
-    // region_vertex_list.push_back( list2_vertex );
+    int sum = 0;
+    for (unsigned k=0; k<reg_num; ++k) region_node_list.push_back(std::vector<Node *>(0));
 
     for (unsigned i=0; i<node_list.size(); i++) {
         node = node_list[i];
 
-        // Find which region the node belongs to
+        node->region_ID.resize(region_adj.size(), -1);
 
-        // Basic splitting between north and south hemisphere
-        
-        if (node->sph_coords[1] >= 0.0) {   // North of or at equator
-            node->region = 0;
-            list1_node.push_back(node);
-        }
-        else    {                            // South of equator
-            node->region = 1;
-            list2_node.push_back(node);    
+        for (unsigned k=0; k<reg_num; ++k) {
+                if (region_list[k]->isInside(node->sph_coords) ) {
+                    node->region = k;//region_list[k]->ID;
+                    region_node_list[k].push_back(node);
+                    node->added_to_region = true;
+                    sum++;
+                    break;  
+                }
         }
 
-        
+        if (!node->added_to_region) std::cout<<" NO REGION AROUND POSITION "<<node->sph_coords[1]*180./_PI<<' '<<node->sph_coords[2]*180./_PI<<std::endl;
+
     }
-    region_node_list.push_back( list1_node );
-    region_node_list.push_back( list2_node );
 
+
+    // for (unsigned k=0; k<reg_num; ++k) {
+    //     // reduceBandwidth<Node>(region_node_list[k]);
+    //     for (unsigned i=0; i<region_node_list[k].size(); i++) {
+    //         region_node_list[k][i]->ID = (int)i;
+    //     }
+    // }
+
+    for (unsigned k=0; k<reg_num; ++k) region_face_list.push_back(std::vector<Face *>(0));
     for (unsigned i=0; i<face_list.size(); i++) {
         face = face_list[i];
 
-        if (face->sph_coords[1] >= 0.0) {   // North of or at equator
-            face->region = 0;
-            list1_face.push_back(face);
-        }
-        else    {                            // South of equator
-            face->region = 1;
-            list2_face.push_back(face);    
+        face->region_ID.resize(region_adj.size(), -1);
+
+        for (unsigned k=0; k<reg_num; ++k) {
+                if (region_list[k]->isInside(face->sph_coords) ) {
+                    face->region = k;//region_list[k]->ID;
+                    region_face_list[k].push_back(face);
+                    face->added_to_region = true;
+                    sum++;
+                    break;  
+                }
         }
 
-        // std::cout<<face->sph_coords[1]<<' '<<face->n1->sph_coords[1]<<' '<<face->n2->sph_coords[1]<<' '<<face->v1->sph_coords[1]<<' '<<face->v2->sph_coords[1]<<std::endl;
+        if (!face->added_to_region) std::cout<<" NO REGION AROUND POSITION "<<face->sph_coords[1]*180./_PI<<' '<<face->sph_coords[2]*180./_PI<<std::endl;
     }
-    region_face_list.push_back( list1_face );
-    region_face_list.push_back( list2_face );
-
-    
 
 
+    for (unsigned k=0; k<reg_num; ++k) region_vertex_list.push_back(std::vector<Vertex *>(0));
     for (unsigned i=0; i<vertex_list.size(); i++) {
         vertex = vertex_list[i];
 
-        if (vertex->sph_coords[1] >= 0.0) {   // North of or at equator
-            vertex->region = 0;
-            list1_vertex.push_back(vertex);
+        vertex->region_ID.resize(region_adj.size(), -1);
+
+        for (unsigned k=0; k<reg_num; ++k) {
+                if (region_list[k]->isInside(vertex->sph_coords) ) {
+                    vertex->region = k;//region_list[k]->ID;
+                    region_vertex_list[k].push_back(vertex);
+                    vertex->added_to_region = true;
+                    sum++;
+                    break;  
+                }
         }
-        else    {                            // South of equator
-            vertex->region = 1;
-            list2_vertex.push_back(vertex);    
-        }
+
+        if (!vertex->added_to_region) std::cout<<" NO REGION AROUND POSITION "<<vertex->sph_coords[1]*180./_PI<<' '<<vertex->sph_coords[2]*180./_PI<<std::endl;
     }
-    region_vertex_list.push_back( list1_vertex );
-    region_vertex_list.push_back( list2_vertex );
+
+    // Now all elements have been assigned to regions...
 
     for (unsigned k=0; k<region_node_list.size(); k++) {
         std::vector<Node *> current_node_list = region_node_list[k];
@@ -851,10 +908,6 @@ void Grid::allocateElementsToRegions(void)
             node->RID = i;          // Give the node a local ID
             node->updateGhosts();
 
-            // if (node->node_ghost_list.size() != 0) std::cout<<"Node "<<node->ID<<" has ghosts";
-            // for (unsigned j=0; j<node->node_ghost_list.size(); j++)
-            //      std::cout<<' '<<node->node_ghost_list[j]->ID;
-            // if (node->node_ghost_list.size() != 0) std::cout<<std::endl;
         }
     }
     
@@ -868,10 +921,6 @@ void Grid::allocateElementsToRegions(void)
             face->RID = i;          // Give the face a local ID
             face->updateGhosts();
 
-            // if (face->node_ghost_list.size() != 0) std::cout<<"Face "<<face->ID<<" in region "<<k<<" has ghosts";
-            // for (unsigned j=0; j<face->node_ghost_list.size(); j++)
-            //      std::cout<<' '<<face->node_ghost_list[j]->ID<<" at lat "<<face->node_ghost_list[j]->sph_coords[1]<<", ";
-            // if (face->node_ghost_list.size() != 0) std::cout<<std::endl;
         }
     }
 
@@ -887,18 +936,8 @@ void Grid::allocateElementsToRegions(void)
         }
     }
 
-    // for (unsigned k1=0; k1<region_adj.size(); k1++) {           // Region
-    //     for (unsigned k2=0; k2<region_adj[k1].size(); k2++) {   // Neighouring region
-    //         std::vector<Node *> current_node_ghost_list;
-    //         std::vector<Node *> current_node_list = region_node_list[k2];
-
-    //         Node * node;
-    //         for (unsigned i=0; i<current_node_list.size(); i++) {
-    //             node = current_node_list[i];
-    //             if (node->region == k1) current_node_ghost_list.push_back(node);
-    //         }
-    //     }
-    // }
+    // for (unsigned k=0; k<region_node_list.size(); k++) {
+    // std::vector<Node *> current_node_list = region_node_list[k];
 
     // Loop over each region
     for (unsigned k=0; k<region_node_list.size(); k++) {
@@ -914,120 +953,135 @@ void Grid::allocateElementsToRegions(void)
             Node * node = current_node_list[i];
          
             // Add ghost nodes that are adjacent to nodes
-            for (unsigned j=0; j<node->node_ghost_list.size(); j++) {
-                Node * node_to_add = node->node_ghost_list[j];
+            for (unsigned j=0; j<node->node_ghost_list.size(); j++) current_node_ghost_list.push_back(node->node_ghost_list[j]);
+            for (unsigned j=0; j<node->face_ghost_list.size(); j++) current_face_ghost_list.push_back(node->face_ghost_list[j]);
+            for (unsigned j=0; j<node->vertex_ghost_list.size(); j++) current_vertex_ghost_list.push_back(node->vertex_ghost_list[j]);
 
-                if (!isInList<Node>(node_to_add, current_node_ghost_list)) 
-                    current_node_ghost_list.push_back(node_to_add);
-            }
-
-            for (unsigned j=0; j<node->face_ghost_list.size(); j++) {
-                Face * face_to_add = node->face_ghost_list[j];
-
-                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
-                    current_face_ghost_list.push_back(face_to_add);
-            }
-
-            for (unsigned j=0; j<node->vertex_ghost_list.size(); j++) {
-                Vertex * vertex_to_add = node->vertex_ghost_list[j];
-
-                if (!isInList<Vertex>(vertex_to_add, current_vertex_ghost_list)) 
-                    current_vertex_ghost_list.push_back(vertex_to_add);
-            }
         }
         
         for (unsigned i=0; i<current_face_list.size(); i++) {
             Face * face = current_face_list[i];
             // std::cout<<k<<' '<<face->sph_coords[1]<<std::endl;
-         
-            Node * node_to_add;
-            for (unsigned j=0; j<face->node_ghost_list.size(); j++)
-            {
-                // std::cout<<"   "<<face->node_ghost_list[j]->region<<std::endl;
-                node_to_add = face->node_ghost_list[j];
-                if (!isInList<Node>(node_to_add, current_node_ghost_list)) 
-                    current_node_ghost_list.push_back(node_to_add);
-            }
-
-            for (unsigned j=0; j<face->face1_ghost_list.size(); j++) {
-                Face * face_to_add = face->face1_ghost_list[j];
-
-                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
-                    current_face_ghost_list.push_back(face_to_add);
-            }
-
-            for (unsigned j=0; j<face->face2_ghost_list.size(); j++) {
-                Face * face_to_add = face->face2_ghost_list[j];
-
-                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
-                    current_face_ghost_list.push_back(face_to_add);
-            }
-
-            for (unsigned j=0; j<face->vertex_ghost_list.size(); j++) {
-                Vertex * vertex_to_add = face->vertex_ghost_list[j];
-
-                if (!isInList<Vertex>(vertex_to_add, current_vertex_ghost_list)) 
-                    current_vertex_ghost_list.push_back(vertex_to_add);
-            }
+            for (unsigned j=0; j<face->node_ghost_list.size(); j++) current_node_ghost_list.push_back(face->node_ghost_list[j]);
+            for (unsigned j=0; j<face->face1_ghost_list.size(); j++) current_face_ghost_list.push_back(face->face1_ghost_list[j]);
+            for (unsigned j=0; j<face->face2_ghost_list.size(); j++) current_face_ghost_list.push_back(face->face2_ghost_list[j]);
+            for (unsigned j=0; j<face->vertex_ghost_list.size(); j++) current_vertex_ghost_list.push_back(face->vertex_ghost_list[j]);
         }
 
         for (unsigned i=0; i<current_vertex_list.size(); i++) {
             Vertex * vertex = current_vertex_list[i];
-            // std::cout<<k<<' '<<vertex->sph_coords[1]<<std::endl;
-         
 
-            // for (unsigned j=0; j<vertex->vertex_ghost_list.size(); j++) {
-            //     Vertex * vertex_to_add = vertex->vertex_ghost_list[j];
+            for (unsigned j=0; j<vertex->node_ghost_list.size(); j++) current_node_ghost_list.push_back(vertex->node_ghost_list[j]);
+            for (unsigned j=0; j<vertex->face_ghost_list.size(); j++) current_face_ghost_list.push_back(vertex->face_ghost_list[j]);
+            // for (unsigned j=0; j<vertex->vertex_ghost_list.size(); j++) current_vertex_ghost_list.push_back(vertex->vertex_ghost_list[j]);
 
-            //     if (!isInList<Vertex>(vertex_to_add, current_vertex_ghost_list)) 
-            //         current_vertex_ghost_list.push_back(vertex_to_add);
-            // }
-
-            Node * node_to_add;
-            for (unsigned j=0; j<vertex->node_ghost_list.size(); j++)
-            {
-                // std::cout<<"   "<<vertex->node_ghost_list[j]->region<<std::endl;
-                node_to_add = vertex->node_ghost_list[j];
-                if (!isInList<Node>(node_to_add, current_node_ghost_list)) 
-                    current_node_ghost_list.push_back(node_to_add);
-            }
-
-            for (unsigned j=0; j<vertex->face_ghost_list.size(); j++) {
-                Face * face_to_add = vertex->face_ghost_list[j];
-
-                if (!isInList<Face>(face_to_add, current_face_ghost_list)) 
-                    current_face_ghost_list.push_back(face_to_add);
-            }
         }
+
+        // std::sort( current_node_ghost_list.begin(), current_node_ghost_list.end() );
+        std::sort( current_node_ghost_list.begin( ), current_node_ghost_list.end( ), [ ]( const auto& lhs, const auto& rhs )
+        { return lhs->region < rhs->region; });
+        current_node_ghost_list.erase( std::unique( current_node_ghost_list.begin(), current_node_ghost_list.end() ), current_node_ghost_list.end() );
+
+        // std::sort( current_face_ghost_list.begin(), current_face_ghost_list.end() );
+        std::sort( current_face_ghost_list.begin( ), current_face_ghost_list.end( ), [ ]( const auto& lhs, const auto& rhs )
+        { return lhs->region < rhs->region; });
+        current_face_ghost_list.erase( std::unique( current_face_ghost_list.begin(), current_face_ghost_list.end() ), current_face_ghost_list.end() );
+
+        // std::sort( current_vertex_ghost_list.begin(), current_vertex_ghost_list.end() );
+        std::sort( current_vertex_ghost_list.begin( ), current_vertex_ghost_list.end( ), [ ]( const auto& lhs, const auto& rhs )
+        { return lhs->region < rhs->region; });
+        current_vertex_ghost_list.erase( std::unique( current_vertex_ghost_list.begin(), current_vertex_ghost_list.end() ), current_vertex_ghost_list.end() );
+
 
         region_node_ghost_list.push_back( current_node_ghost_list );
         region_face_ghost_list.push_back( current_face_ghost_list );
+        region_vertex_ghost_list.push_back( current_vertex_ghost_list );
+
+
+
     }
 
-    // for (int k=0; k<region_node_ghost_list.size(); k++) {
-    //     std::vector<Node *> current_list = region_node_ghost_list[k];
-    //     for (unsigned i=0; i<current_list.size(); i++)
-    //     {
-    //         std::cout<<"Region "<<k<<" has ghost node "<<current_list[i]->ID<<std::endl;
-    //     }
-    // }
+    // std::cout<<" LOOOK HERE "<<region_node_list[0].size()<<' '<<region_node_ghost_list[0].size()<<std::endl;
 
-    // for (int k=0; k<region_face_ghost_list.size(); k++) {
-    //     std::vector<Face *> current_list = region_face_ghost_list[k];
-    //     for (unsigned i=0; i<current_list.size(); i++)
-    //     {
-    //         std::cout<<"Region "<<k<<" has ghost face "<<current_list[i]->ID<<std::endl;
-    //     }
-    // }
-
-    std::cout<<region_node_list[0].size()<<' '<<region_node_list[1].size()<<std::endl;
-    std::cout<<region_node_ghost_list[0].size()<<' '<<region_node_ghost_list[1].size()<<std::endl;
-
-    std::cout<<std::endl;
-
-    std::cout<<region_face_list[0].size()<<' '<<region_face_list[1].size()<<std::endl;
-    std::cout<<region_face_ghost_list[0].size()<<' '<<region_face_ghost_list[1].size()<<std::endl;
     
+    int sum_nodes = 0;
+    for (unsigned k=0; k<region_node_list.size(); k++) {
+        std::cout<<"REGION "<<k<<std::endl;
+        std::cout<<"   "<<region_node_list[k].size()<<' '<<region_node_ghost_list[k].size()<<' '<<(double)region_node_ghost_list[k].size()/(double)region_node_list[k].size()<<std::endl;
+        sum_nodes += region_node_list[k].size();
+    }
+
+    int sum_faces = 0;
+    for (unsigned k=0; k<region_face_list.size(); k++) {
+        std::cout<<"REGION "<<k<<std::endl;
+        std::cout<<"   "<<region_face_list[k].size()<<' '<<region_face_ghost_list[k].size()<<' '<<(double)region_face_ghost_list[k].size()/(double)region_face_list[k].size()<<std::endl;
+        sum_faces += region_face_list[k].size();
+    }
+
+    int sum_vertices = 0;
+    for (unsigned k=0; k<region_vertex_list.size(); k++) {
+        std::cout<<"REGION "<<k<<std::endl;
+        std::cout<<"   "<<region_vertex_list[k].size()<<' '<<region_vertex_ghost_list[k].size()<<' '<<(double)region_vertex_ghost_list[k].size()/(double)region_vertex_list[k].size()<<std::endl;
+        sum_vertices += region_vertex_list[k].size();
+    }
+
+    std::cout<<" TOTAL NODES "<<sum_nodes<<' '<<node_list.size()<<std::endl;
+    std::cout<<" TOTAL FACES "<<sum_faces<<' '<<face_list.size()<<std::endl;
+    std::cout<<" TOTAL VERTICES "<<sum_vertices<<' '<<vertex_list.size()<<std::endl;
+
+    std::copy(region_node_list.begin(), region_node_list.end(), std::back_inserter(region_all_node_list));
+    std::copy(region_face_list.begin(), region_face_list.end(), std::back_inserter(region_all_face_list));
+    std::copy(region_vertex_list.begin(), region_vertex_list.end(), std::back_inserter(region_all_vertex_list)); 
+
+    std::cout<<region_node_list.size()<<std::endl;
+    std::cout<<region_all_node_list.size()<<std::endl;
+
+    // Append ghost list to region list
+    for (unsigned k=0; k<region_node_list.size(); k++)
+    {
+        region_all_node_list[k].insert(std::end(region_all_node_list[k]), std::begin(region_node_ghost_list[k]), std::end(region_node_ghost_list[k]));
+    }
+
+    for (unsigned k=0; k<region_face_list.size(); k++)
+    {
+        region_all_face_list[k].insert(std::end(region_all_face_list[k]), std::begin(region_face_ghost_list[k]), std::end(region_face_ghost_list[k]));
+    }
+
+    for (unsigned k=0; k<region_vertex_list.size(); k++)
+    {
+        region_all_vertex_list[k].insert(std::end(region_all_vertex_list[k]), std::begin(region_vertex_ghost_list[k]), std::end(region_vertex_ghost_list[k]));
+    }
+    
+
+    // Loop over region number
+    for (unsigned k=0; k<region_all_node_list.size(); k++)
+    {
+        for (unsigned i=0; i<region_all_node_list[k].size(); i++) {
+            node = region_all_node_list[k][i];
+
+            // Store the index in which this node appears in 
+            // the current region list
+            node->region_ID[k] = i; 
+
+            // std::cout<<k<<' '<<i<<' '<<node->region<<' '<<node->sph_coords[1]*180./_PI<<' '<<node->sph_coords[2]*180./_PI<<std::endl;
+        }
+        
+        for (unsigned i=0; i<region_all_face_list[k].size(); i++) {
+            face = region_all_face_list[k][i];
+
+            // Store the index in which this face appears in 
+            // the current region list
+            face->region_ID[k] = i; 
+        }
+
+        for (unsigned i=0; i<region_all_vertex_list[k].size(); i++) {
+            vertex = region_all_vertex_list[k][i];
+
+            // Store the index in which this vertex appears in 
+            // the current region list
+            vertex->region_ID[k] = i; 
+        }
+    }
 }
 
 // void Grid::defineRegion(int reg, int subReg, int ID[])
@@ -1282,6 +1336,8 @@ void Grid::saveGrid2File(void)
     int f[6];
     double cx[6], cy[6];
 
+    findCentroids();
+
     std::cout<<"SAVING"<<std::endl;
 
     std::string file_path = "grid_l"+std::to_string(recursion_lvl+1)+".txt";
@@ -1298,8 +1354,8 @@ void Grid::saveGrid2File(void)
         {
             // std::cout<<node->ID<<std::endl;
 
-            lat = node->sph_coords[1]*180./pi;
-            lon = node->sph_coords[2]*180./pi + 180.0;
+            lat = node->sph_coords[1]*180./_PI;
+            lon = node->sph_coords[2]*180./_PI + 180.0;
 
             if (lon>359.99) lon = 0.0;
             if (i<2) lon = 180.0;
@@ -1311,8 +1367,8 @@ void Grid::saveGrid2File(void)
             {
                 f[j] = node->friends_list[j]->ID;
 
-                cx[j] = node->centroids[j][1]*180./pi;
-                cy[j] = node->centroids[j][2]*180./pi + 180.0;
+                cx[j] = node->centroids[j][1]*180./_PI;
+                cy[j] = node->centroids[j][2]*180./_PI + 180.0;
                 if (cy[j]>359.99) cy[j] =0.0;
 
             }
@@ -1332,6 +1388,8 @@ void Grid::saveGrid2File(void)
 // These are the same as the node centroids.
 void Grid::createVertices(void)
 {
+    // reduceBandwidth<Node>(node_list);
+
     for (unsigned i=0; i<node_list.size(); i++) {
         Node * node1 = node_list[i];
 
@@ -1352,6 +1410,8 @@ void Grid::createVertices(void)
             if (!shared){
                 double xyz[3] = {1.0, 2.0, 3.0};
 
+                // std::cout<<i<<" VERTEX FOR NODE "<<node2->ID<<' '<<node3->ID<<std::endl;
+
                 voronoiCenter(node1->xyz_coords, node2->xyz_coords, node3->xyz_coords, xyz);
 
                 Vertex * vertex = new Vertex(vertex_list.size(), xyz, node1, node2, node3);
@@ -1366,6 +1426,20 @@ void Grid::createVertices(void)
 
         // Sort order of vertexes. Important!
         node1->orderVertexList();
+
+        
+
+        // std::cout<<node1->sph_coords[1]*180/_PI<<' '<<node1->sph_coords[2]*180/_PI<<std::endl;
+        // for (unsigned j=0; j<node1->friends_list.size(); j++) 
+        // {
+        
+        // //    std::cout<<' '<<j<<"  X: "<<node1->vertex_list[j]->xyz_coords[0]<<' '<<node1->centroids[j]->xyz_coords[0]<<std::endl;
+        // std::cout<<' '<<j<<"  LAT: "<<node1->vertex_list[j]->sph_coords[1]*180/_PI<<' '<<node1->centroids[j][1]*180/_PI<<std::endl;
+        // std::cout<<' '<<j<<"  LON: "<<node1->vertex_list[j]->sph_coords[2]*180/_PI<<' '<<node1->centroids[j][2]*180/_PI<<std::endl;
+        // }
+        // std::cout<<std::endl;
+
+
     }
 
     std::cout<<"GENERATED "<<vertex_list.size()<<" vertii."<<std::endl;
@@ -1468,6 +1542,26 @@ void Grid::calculateProperties(void)
         // node->updateVertexAreas();   // Should this be a vertex or node property? --> probably a node property
     }
 
+
+    // for (unsigned i=0; i<face_list.size(); i++)
+    // {
+    //     Face * face = face_list[i];
+
+    //     face->updateFaceFriends();      // Faces shared by the nodes adjoining parent face
+    //     face->updateIntersectPos();     // intersect of face with node-node vector - Checked! (small diff with face center, as expected)
+    //     face->updateArea();             // face area with nodes and vertices
+    //     // face->updateInterpolationWeights();
+
+    //     // std::cout<<face->friends_list1.size()<<' '<<face->weights1.size()<<' '<<face->friends_list2.size()<<' '<<face->weights2.size()<<std::endl;
+    //     // for (int j=0; j<face->friends_list1.size(); j++) {
+    //     //     std::cout<<' '<<face->weights1[j];
+    //     // }
+
+    //     // std::cout<<std::endl<<std::endl;
+        
+    // }
+
+
     for (unsigned i=0; i<vertex_list.size(); i++)
     {
         Vertex * vertex = vertex_list[i];
@@ -1476,6 +1570,25 @@ void Grid::calculateProperties(void)
         vertex->updateFaceDirs();         // If the face normal circulates clockwise or anticlockwise
         vertex->updateArea();
         vertex->updateSubAreas();
+        vertex->updateInterpolationWeights();
+    }
+
+    for (unsigned i=0; i<face_list.size(); i++)
+    {
+        Face * face = face_list[i];
+
+        // face->updateFaceFriends();      // Faces shared by the nodes adjoining parent face
+        // face->updateIntersectPos();     // intersect of face with node-node vector - Checked! (small diff with face center, as expected)
+        // face->updateArea();             // face area with nodes and vertices
+        face->updateInterpolationWeights();
+
+        // std::cout<<face->friends_list1.size()<<' '<<face->weights1.size()<<' '<<face->friends_list2.size()<<' '<<face->weights2.size()<<std::endl;
+        // for (int j=0; j<face->friends_list1.size(); j++) {
+        //     std::cout<<' '<<face->weights1[j];
+        // }
+
+        // std::cout<<std::endl<<std::endl;
+        
     }
 
     // This update depends on the values of each vertex
@@ -1494,7 +1607,497 @@ void Grid::calculateProperties(void)
 
 };
 
+
+
 void Grid::saveGrid2HDF5(void)
+{
+    char dataFile[1024];
+
+    for (unsigned k=0; k<region_node_list.size(); k++) {
+
+        std::string grid_num = std::to_string(k);
+        size_t num_zero = 3;
+        auto new_str = std::string(num_zero - std::min(num_zero, grid_num.length()), '0') + grid_num;
+        std::string file_name = "/grid_l"+std::to_string(recursion_lvl+1)+"."+new_str+".h5";
+        std::string file_path = std::filesystem::current_path().string() + file_name;
+        std::strcpy(dataFile, file_path.c_str());
+        
+        
+        // local and ghost elements
+        std::vector<Face *> r_face_list = region_all_face_list[k];
+        std::vector<Node *> r_node_list = region_all_node_list[k];
+        std::vector<Vertex *> r_vertex_list = region_all_vertex_list[k];
+
+        // local elements only (ng = no ghost)
+        std::vector<Face *> r_face_list_ng = region_face_list[k];
+        std::vector<Node *> r_node_list_ng = region_node_list[k];
+        std::vector<Vertex *> r_vertex_list_ng = region_vertex_list[k];
+
+
+        unsigned FACE_NUM = r_face_list.size();         // local + ghost
+        unsigned NODE_NUM = r_node_list.size();
+        unsigned VERTEX_NUM = r_vertex_list.size();
+        
+        unsigned VERTEX_NUM_NG = r_vertex_list_ng.size();    // no ghost points included
+        unsigned FACE_NUM_NG = r_face_list_ng.size();
+        unsigned NODE_NUM_NG = r_node_list_ng.size();
+
+        std::cout<<k<<' '<<NODE_NUM<<std::endl;
+
+        hid_t file = H5Fcreate(dataFile, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+
+        // SAVE FACE INFO -------------------------------------------------------------------
+        hid_t face_group = H5Gcreate(file, "FACES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+        hid_t aid2  = H5Screate(H5S_SCALAR);
+        hid_t attr2 = H5Acreate2(face_group, "FACE_NUM", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+        hid_t ret = H5Awrite(attr2, H5T_NATIVE_UINT, &FACE_NUM);
+        H5Aclose(attr2);
+        H5Sclose(aid2);
+
+        aid2  = H5Screate(H5S_SCALAR);
+        attr2 = H5Acreate2(face_group, "FACE_NUM_NO_GHOSTS", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Awrite(attr2, H5T_NATIVE_UINT, &FACE_NUM_NG);
+        H5Aclose(attr2);
+        H5Sclose(aid2);
+
+
+        // std::cout<<H5::PredType::NATIVE_UINT<<std::endl;
+        h5DataArray<unsigned> * face_ID = new h5DataArray<unsigned>(FACE_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<FACE_NUM; i++) face_ID->data[i] = i;//r_face_list[i]->RID;
+        saveToHDF5Group(&face_group, face_ID, "ID");
+        delete face_ID;
+
+        h5DataArray<unsigned> * face_reg_ID = new h5DataArray<unsigned>(FACE_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<FACE_NUM; i++) face_reg_ID->data[i] = r_face_list[i]->RID;
+        saveToHDF5Group(&face_group, face_reg_ID, "REGION_ID");
+        delete face_reg_ID;
+
+        h5DataArray<unsigned> * face_reg = new h5DataArray<unsigned>(FACE_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<FACE_NUM; i++) face_reg->data[i] = r_face_list[i]->region;
+        saveToHDF5Group(&face_group, face_reg, "REGION");
+        delete face_reg;
+
+        h5DataArray<double> * face_length = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) face_length->data[i] = r_face_list[i]->length;
+        saveToHDF5Group(&face_group, face_length, "LENGTH");
+        delete face_length;
+
+        h5DataArray<double> * face_lat = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) face_lat->data[i] = r_face_list[i]->sph_coords[1]*180.0/_PI; // Convert to degrees
+        saveToHDF5Group(&face_group, face_lat, "LAT");
+        delete face_lat;
+
+        h5DataArray<double> * face_lon = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) face_lon->data[i] = r_face_list[i]->sph_coords[2]*180.0/_PI + 180.0;
+        saveToHDF5Group(&face_group, face_lon, "LON");
+        delete face_lon;
+
+        h5DataArray<double> * intersect_lat = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) intersect_lat->data[i] = r_face_list[i]->sph_intersect[1]*180.0/_PI; // Convert to degrees
+        saveToHDF5Group(&face_group, intersect_lat, "INTERSECT_LAT");
+        delete intersect_lat;
+
+        h5DataArray<double> * intersect_lon = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) intersect_lon->data[i] = r_face_list[i]->sph_intersect[2]*180.0/_PI + 180.0;
+        saveToHDF5Group(&face_group, intersect_lon, "INTERSECT_LON");
+        delete intersect_lon;
+
+        h5DataArray<double> * intersect_length = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) intersect_length->data[i] = r_face_list[i]->length_intersect;
+        saveToHDF5Group(&face_group, intersect_length, "INTERSECT_LENGTH");
+        delete intersect_length;
+
+        h5DataArray<double> * face_area = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) face_area->data[i] = r_face_list[i]->area;
+        saveToHDF5Group(&face_group, face_area, "AREA");
+        delete face_area;
+
+        h5DataArray<double> * face_nx = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) face_nx->data[i] = r_face_list[i]->sph_normal[0];
+        saveToHDF5Group(&face_group, face_nx, "NORMAL_VEC_LON");
+        delete face_nx;
+
+        h5DataArray<double> * face_ny = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<FACE_NUM; i++) face_ny->data[i] = r_face_list[i]->sph_normal[1];
+        saveToHDF5Group(&face_group, face_ny, "NORMAL_VEC_LAT");
+        delete face_ny;
+        // -----------------------------------------------------------------------------------
+
+
+
+        // SAVE NODE INFO -------------------------------------------------------------------
+        hid_t node_group = H5Gcreate(file, "NODES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+        aid2  = H5Screate(H5S_SCALAR);
+        attr2 = H5Acreate2(node_group, "NODE_NUM", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Awrite(attr2, H5T_NATIVE_UINT, &NODE_NUM);
+        H5Aclose(attr2);
+        H5Sclose(aid2);
+
+        aid2  = H5Screate(H5S_SCALAR);
+        attr2 = H5Acreate2(node_group, "NODE_NUM_NO_GHOSTS", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Awrite(attr2, H5T_NATIVE_UINT, &NODE_NUM_NG);
+        H5Aclose(attr2);
+        H5Sclose(aid2);
+
+
+
+        h5DataArray<unsigned> * node_ID = new h5DataArray<unsigned>(NODE_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<NODE_NUM; i++) node_ID->data[i] = i;//r_node_list[i]->RID;
+        saveToHDF5Group(&node_group, node_ID, "ID");
+        delete node_ID;
+
+        h5DataArray<unsigned> * node_reg = new h5DataArray<unsigned>(NODE_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<NODE_NUM; i++) node_reg->data[i] = r_node_list[i]->region;
+        saveToHDF5Group(&node_group, node_reg, "REGION");
+        delete node_reg;
+
+        // Index of node within it's own region
+        h5DataArray<unsigned> * node_reg_ID = new h5DataArray<unsigned>(NODE_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<NODE_NUM; i++) node_reg_ID->data[i] = r_node_list[i]->RID;
+        saveToHDF5Group(&node_group, node_reg_ID, "REGION_ID");
+        delete node_reg_ID;
+
+        h5DataArray<double> * node_area = new h5DataArray<double>(NODE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<NODE_NUM; i++) node_area->data[i] = r_node_list[i]->area;
+        saveToHDF5Group(&node_group, node_area, "AREA");
+        delete node_area;
+
+        h5DataArray<double> * node_lat = new h5DataArray<double>(NODE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<NODE_NUM; i++) node_lat->data[i] = r_node_list[i]->sph_coords[1]*180.0/_PI; // Convert to degrees
+        saveToHDF5Group(&node_group, node_lat, "LAT");
+        delete node_lat;
+
+        h5DataArray<double> * node_lon = new h5DataArray<double>(NODE_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<NODE_NUM; i++) node_lon->data[i] = r_node_list[i]->sph_coords[2]*180.0/_PI + 180.0;
+        saveToHDF5Group(&node_group, node_lon, "LON");
+        delete node_lon;
+
+        // -----------------------------------------------------------------------------------
+
+
+        // SAVE VERTEX INFO -------------------------------------------------------------------
+        hid_t vertex_group = H5Gcreate(file, "VERTICES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+        aid2  = H5Screate(H5S_SCALAR);
+        attr2 = H5Acreate2(vertex_group, "VERTEX_NUM", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Awrite(attr2, H5T_NATIVE_UINT, &VERTEX_NUM);
+        H5Aclose(attr2);
+        H5Sclose(aid2);
+
+        aid2  = H5Screate(H5S_SCALAR);
+        attr2 = H5Acreate2(vertex_group, "VERTEX_NUM_NO_GHOSTS", H5T_NATIVE_UINT, aid2, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Awrite(attr2, H5T_NATIVE_UINT, &VERTEX_NUM_NG);
+        H5Aclose(attr2);
+        H5Sclose(aid2);
+
+
+
+        h5DataArray<unsigned> * vertex_ID = new h5DataArray<unsigned>(VERTEX_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_ID->data[i] = i;//r_vertex_list[i]->RID;
+        saveToHDF5Group(&vertex_group, vertex_ID, "ID");
+        delete vertex_ID;
+
+        h5DataArray<unsigned> * vertex_reg_ID = new h5DataArray<unsigned>(VERTEX_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_reg_ID->data[i] = r_vertex_list[i]->RID;
+        saveToHDF5Group(&vertex_group, vertex_reg_ID, "REGION_ID");
+        delete vertex_reg_ID;
+
+        h5DataArray<unsigned> * vertex_reg = new h5DataArray<unsigned>(VERTEX_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_reg->data[i] = r_vertex_list[i]->region;
+        saveToHDF5Group(&vertex_group, vertex_reg, "REGION");
+        delete vertex_reg;
+
+        h5DataArray<double> * vertex_lat = new h5DataArray<double>(VERTEX_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_lat->data[i] = r_vertex_list[i]->sph_coords[1]*180.0/_PI; // Convert to degrees
+        saveToHDF5Group(&vertex_group, vertex_lat, "LAT");
+        delete vertex_lat;
+
+        h5DataArray<double> * vertex_lon = new h5DataArray<double>(VERTEX_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_lon->data[i] = r_vertex_list[i]->sph_coords[2]*180.0/_PI + 180.0;
+        saveToHDF5Group(&vertex_group, vertex_lon, "LON");
+        delete vertex_lon;
+
+        h5DataArray<double> * vertex_area = new h5DataArray<double>(VERTEX_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_area->data[i] = r_vertex_list[i]->area;
+        saveToHDF5Group(&vertex_group, vertex_area, "AREA");
+        delete vertex_area;
+
+        // ---------------------------------------------------------------------------------------
+
+
+        // INTERCONNECTIVITY ----------------------------------------------------------------------
+        hid_t node_group_f = H5Gcreate(node_group, "FRIENDS", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        
+        // VERTEX --> NODES
+        unsigned FRIENDS_NUM = 0;    
+        for (unsigned i=0; i<NODE_NUM_NG; i++) FRIENDS_NUM += r_node_list[i]->vertex_list.size();
+
+        hid_t node_group_f_v = H5Gcreate(node_group_f, "VERTICES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * node_v_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        int count=0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_node_list[i]->vertex_list.size(); j++) {
+                // node_v_ID->data[count] = r_node_list[i]->vertex_list[j]->RID;
+                node_v_ID->data[count] = r_node_list[i]->vertex_list[j]->region_ID[k];
+                count++;
+            }
+        }
+        saveToHDF5Group(&node_group_f_v, node_v_ID, "ID");
+        delete node_v_ID;
+
+        h5DataArray<unsigned> * node_v_fnum = new h5DataArray<unsigned>(NODE_NUM_NG, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<NODE_NUM_NG; i++) node_v_fnum->data[i] = r_node_list[i]->vertex_list.size();
+        saveToHDF5Group(&node_group_f_v, node_v_fnum, "FRIEND_NUM");
+        delete node_v_fnum;
+
+        h5DataArray<double> * node_v_area = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+        count=0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_node_list[i]->vertex_list.size(); j++) {
+                node_v_area->data[count] = r_node_list[i]->vertex_areas[j];
+                count++; }}
+
+        saveToHDF5Group(&node_group_f_v, node_v_area, "AREA");
+        delete node_v_area;
+
+        // FACES --> NODES ---------------------------------------------------------------------------
+        FRIENDS_NUM = 0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) FRIENDS_NUM += r_node_list[i]->face_list.size();
+
+        hid_t node_group_f_f = H5Gcreate(node_group_f, "FACES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * node_f_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        count=0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_node_list[i]->face_list.size(); j++) {
+                // node_f_ID->data[count] = r_node_list[i]->face_list[j]->RID;
+                node_f_ID->data[count] = r_node_list[i]->face_list[j]->region_ID[k];
+                count++; }}
+
+        saveToHDF5Group(&node_group_f_f, node_f_ID, "ID");
+        delete node_f_ID;
+
+        // FACE_DIR --> NODE
+        h5DataArray<int> * node_f_dir = new h5DataArray<int>(FRIENDS_NUM, H5T_NATIVE_INT);
+        count=0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_node_list[i]->face_list.size(); j++) {
+                node_f_dir->data[count] = r_node_list[i]->face_dirs[j];
+                count++; }}
+
+        saveToHDF5Group(&node_group_f_f, node_f_dir, "DIR");
+        delete node_f_dir;
+
+        h5DataArray<unsigned> * node_f_fnum = new h5DataArray<unsigned>(NODE_NUM_NG, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<NODE_NUM_NG; i++) node_f_fnum->data[i] = r_node_list[i]->face_list.size();
+        saveToHDF5Group(&node_group_f_f, node_f_fnum, "FRIEND_NUM");
+        delete node_f_fnum;
+
+        // NODES --> NODES ---------------------------------------------------------------------------
+        FRIENDS_NUM = 0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) FRIENDS_NUM += r_node_list[i]->friends_list.size();
+
+        hid_t node_group_f_n = H5Gcreate(node_group_f, "NODES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * node_n_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        count=0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_node_list[i]->friends_list.size(); j++) {
+                // node_n_ID->data[count] = r_node_list[i]->friends_list[j]->RID;
+                node_n_ID->data[count] = r_node_list[i]->friends_list[j]->region_ID[k];
+                count++; }}
+
+        saveToHDF5Group(&node_group_f_n, node_n_ID, "ID");
+        delete node_n_ID;
+
+        // NODE-->NODE DISTANCE
+        h5DataArray<double> * node_n_dist = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+
+        count=0;
+        for (unsigned i=0; i<NODE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_node_list[i]->friends_list.size(); j++) {
+                node_n_dist->data[count] = r_node_list[i]->node_dists[j];
+                count++; }}
+
+        saveToHDF5Group(&node_group_f_n, node_n_dist, "DISTANCE");
+        delete node_n_dist;
+
+        h5DataArray<unsigned> * node_n_fnum = new h5DataArray<unsigned>(NODE_NUM_NG, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<NODE_NUM_NG; i++) node_n_fnum->data[i] = r_node_list[i]->friends_list.size();
+        saveToHDF5Group(&node_group_f_n, node_n_fnum, "FRIEND_NUM");
+        delete node_n_fnum;
+
+
+
+        
+        // INTERCONNECTIVITY FOR FACES ----------------------------------------------------------------------
+        hid_t face_group_f = H5Gcreate(face_group, "FRIENDS", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        
+        // NODE-->FACES
+        // FRIENDS_NUM = r_face_list.size()*2;  // Each face is next to only 2 nodes and 2 vertices
+        FRIENDS_NUM = FACE_NUM_NG*2;
+
+        hid_t face_group_f_n = H5Gcreate(face_group_f, "NODES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * face_n_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<FACE_NUM_NG; i++) {
+            // face_n_ID->data[2*i]     = r_face_list[i]->n1->RID;
+            // face_n_ID->data[2*i + 1] = r_face_list[i]->n2->RID;
+            face_n_ID->data[2*i]     = r_face_list[i]->n1->region_ID[k];
+            face_n_ID->data[2*i + 1] = r_face_list[i]->n2->region_ID[k]; }
+
+        saveToHDF5Group(&face_group_f_n, face_n_ID, "ID");
+        delete face_n_ID;
+
+        // VERTEXES-->FACES
+        hid_t face_group_f_v = H5Gcreate(face_group_f, "VERTICES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * face_v_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<FACE_NUM_NG; i++) {
+            // face_v_ID->data[2*i]     = r_face_list[i]->v1->RID;
+            // face_v_ID->data[2*i + 1] = r_face_list[i]->v2->RID;
+            face_v_ID->data[2*i]     = r_face_list[i]->v1->region_ID[k];
+            face_v_ID->data[2*i + 1] = r_face_list[i]->v2->region_ID[k]; }
+
+        saveToHDF5Group(&face_group_f_v, face_v_ID, "ID");
+        delete face_v_ID;
+
+        // FACES-->FACES
+        FRIENDS_NUM=0;
+        for (unsigned i=0; i<FACE_NUM_NG; i++) FRIENDS_NUM += r_face_list[i]->friends_list1.size();
+
+        hid_t face_group_f_f1 = H5Gcreate(face_group_f, "FACES1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * face_f1_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        count = 0;
+        for (unsigned i=0; i<FACE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_face_list[i]->friends_list1.size(); j++) {
+                face_f1_ID->data[count] = r_face_list[i]->friends_list1[j]->region_ID[k];
+                count++; }}
+
+        saveToHDF5Group(&face_group_f_f1, face_f1_ID, "ID");
+        delete face_f1_ID;
+
+        // std::cout<<FRIENDS_NUM<<std::endl;
+        h5DataArray<double> * face_f1_weight = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+        count = 0;
+        for (unsigned i=0; i<FACE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_face_list[i]->friends_list1.size(); j++) {
+                face_f1_weight->data[count] = r_face_list[i]->weights1[j];
+                count++; }}
+
+        // count = 0;
+        // for (unsigned i=0; i<FACE_NUM_NG; i++) {
+        //     for (unsigned j=0; j<r_face_list[i]->friends_list1.size(); j++) {
+        //         std::cout<<face_f1_weight->data[count]<<std::endl;
+        //         count++; }}
+        // std::cout<<face_f1_weight->size<<std::endl;
+        // std::cout<<count-1<<std::endl;
+
+        saveToHDF5Group(&face_group_f_f1, face_f1_weight, "WEIGHTS");
+        delete face_f1_weight;
+
+        FRIENDS_NUM=0;
+        for (unsigned i=0; i<FACE_NUM_NG; i++) FRIENDS_NUM += r_face_list[i]->friends_list2.size();
+
+        hid_t face_group_f_f2 = H5Gcreate(face_group_f, "FACES2", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<int> * face_f2_ID = new h5DataArray<int>(FRIENDS_NUM, H5T_NATIVE_INT);
+        count = 0;
+        for (unsigned i=0; i<FACE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_face_list[i]->friends_list2.size(); j++) {
+                face_f2_ID->data[count] = r_face_list[i]->friends_list2[j]->region_ID[k];
+                count++; }}
+
+        saveToHDF5Group(&face_group_f_f2, face_f2_ID, "ID");
+        delete face_f2_ID;
+
+        h5DataArray<double> * face_f2_weight = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+        count = 0;
+        for (unsigned i=0; i<FACE_NUM_NG; i++) {
+            for (unsigned j=0; j<r_face_list[i]->friends_list2.size(); j++) {
+                face_f2_weight->data[count] = r_face_list[i]->weights2[j];
+                count++; }}
+
+        saveToHDF5Group(&face_group_f_f2, face_f2_weight, "WEIGHTS");
+        delete face_f2_weight;
+
+
+        // FACES_NUM-->FACES
+        h5DataArray<unsigned> * face_f1_fnum = new h5DataArray<unsigned>(FACE_NUM_NG, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<FACE_NUM_NG; i++) face_f1_fnum->data[i] = r_face_list[i]->friends_list1.size();
+        
+        saveToHDF5Group(&face_group_f_f1, face_f1_fnum, "FRIEND_NUM");
+        delete face_f1_fnum;
+
+
+        h5DataArray<unsigned> * face_f2_fnum = new h5DataArray<unsigned>(FACE_NUM_NG, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<FACE_NUM_NG; i++) face_f2_fnum->data[i] = r_face_list[i]->friends_list2.size();
+        
+        saveToHDF5Group(&face_group_f_f2, face_f2_fnum, "FRIEND_NUM");
+        delete face_f2_fnum;
+
+
+        // INTERCONNECTIVITY FOR VERTICES ----------------------------------------------------------------------
+        hid_t vertex_group_f = H5Gcreate(vertex_group, "FRIENDS", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        
+        // NODE-->VERTICES
+        FRIENDS_NUM = VERTEX_NUM_NG*3;  // Each vertex is next to only 3 nodes and 3 vertices
+
+        hid_t vertex_group_f_n = H5Gcreate(vertex_group_f, "NODES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * vertex_n_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<VERTEX_NUM_NG; i++) {
+            vertex_n_ID->data[3*i]     = r_vertex_list[i]->node_list[0]->region_ID[k];
+            vertex_n_ID->data[3*i + 1] = r_vertex_list[i]->node_list[1]->region_ID[k];
+            vertex_n_ID->data[3*i + 2] = r_vertex_list[i]->node_list[2]->region_ID[k]; }
+            
+        saveToHDF5Group(&vertex_group_f_n, vertex_n_ID, "ID");
+        delete vertex_n_ID;
+
+        // NODE-->VERTEX AREAS
+        h5DataArray<double> * vertex_n_area = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<VERTEX_NUM_NG; i++) {
+            vertex_n_area->data[3*i]     = r_vertex_list[i]->subareas[0];
+            vertex_n_area->data[3*i + 1] = r_vertex_list[i]->subareas[1];
+            vertex_n_area->data[3*i + 2] = r_vertex_list[i]->subareas[2]; }
+            
+        saveToHDF5Group(&vertex_group_f_n, vertex_n_area, "SUBAREA");
+        delete vertex_n_area;
+
+        h5DataArray<double> * vertex_n_weight = new h5DataArray<double>(FRIENDS_NUM, H5T_NATIVE_DOUBLE);
+        for (unsigned i=0; i<VERTEX_NUM_NG; i++) {
+            vertex_n_weight->data[3*i]     = r_vertex_list[i]->interp_weights[0];
+            vertex_n_weight->data[3*i + 1] = r_vertex_list[i]->interp_weights[1];
+            vertex_n_weight->data[3*i + 2] = r_vertex_list[i]->interp_weights[2]; }
+            
+        saveToHDF5Group(&vertex_group_f_n, vertex_n_weight, "WEIGHT");
+        delete vertex_n_weight;
+
+
+        // FACES-->VERTICES
+        hid_t vertex_group_f_f = H5Gcreate(vertex_group_f, "FACES", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        h5DataArray<unsigned> * vertex_f_ID = new h5DataArray<unsigned>(FRIENDS_NUM, H5T_NATIVE_UINT);
+        for (unsigned i=0; i<VERTEX_NUM_NG; i++) {
+            vertex_f_ID->data[3*i]     = r_vertex_list[i]->face_list[0]->region_ID[k];
+            vertex_f_ID->data[3*i + 1] = r_vertex_list[i]->face_list[1]->region_ID[k];
+            vertex_f_ID->data[3*i + 2] = r_vertex_list[i]->face_list[2]->region_ID[k]; }
+
+        saveToHDF5Group(&vertex_group_f_f, vertex_f_ID, "ID");
+        delete vertex_f_ID;
+
+        // FACEDIR-->VERTICES
+        h5DataArray<int> * vertex_f_dir = new h5DataArray<int>(FRIENDS_NUM, H5T_NATIVE_INT);
+        for (unsigned i=0; i<VERTEX_NUM_NG; i++) {
+            vertex_f_dir->data[3*i]     = r_vertex_list[i]->face_dirs[0];
+            vertex_f_dir->data[3*i + 1] = r_vertex_list[i]->face_dirs[1];
+            vertex_f_dir->data[3*i + 2] = r_vertex_list[i]->face_dirs[2]; }
+
+        saveToHDF5Group(&vertex_group_f_f, vertex_f_dir, "DIR");
+        delete vertex_f_dir;
+
+        H5Fclose(file);
+    }
+    
+} 
+
+void Grid::saveWholeGrid2HDF5(void)
 {
     char dataFile[1024];
     std::string file_name = "/grid_l"+std::to_string(recursion_lvl+1)+".h5";
@@ -1524,22 +2127,22 @@ void Grid::saveGrid2HDF5(void)
     delete face_length;
 
     h5DataArray<double> * face_lat = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<FACE_NUM; i++) face_lat->data[i] = face_list[i]->sph_coords[1]*180.0/pi; // Convert to degrees
+    for (unsigned i=0; i<FACE_NUM; i++) face_lat->data[i] = face_list[i]->sph_coords[1]*180.0/_PI; // Convert to degrees
     saveToHDF5Group(&face_group, face_lat, "LAT");
     delete face_lat;
 
     h5DataArray<double> * face_lon = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<FACE_NUM; i++) face_lon->data[i] = face_list[i]->sph_coords[2]*180.0/pi + 180.0;
+    for (unsigned i=0; i<FACE_NUM; i++) face_lon->data[i] = face_list[i]->sph_coords[2]*180.0/_PI + 180.0;
     saveToHDF5Group(&face_group, face_lon, "LON");
     delete face_lon;
 
     h5DataArray<double> * intersect_lat = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<FACE_NUM; i++) intersect_lat->data[i] = face_list[i]->sph_intersect[1]*180.0/pi; // Convert to degrees
+    for (unsigned i=0; i<FACE_NUM; i++) intersect_lat->data[i] = face_list[i]->sph_intersect[1]*180.0/_PI; // Convert to degrees
     saveToHDF5Group(&face_group, intersect_lat, "INTERSECT_LAT");
     delete intersect_lat;
 
     h5DataArray<double> * intersect_lon = new h5DataArray<double>(FACE_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<FACE_NUM; i++) intersect_lon->data[i] = face_list[i]->sph_intersect[2]*180.0/pi + 180.0;
+    for (unsigned i=0; i<FACE_NUM; i++) intersect_lon->data[i] = face_list[i]->sph_intersect[2]*180.0/_PI + 180.0;
     saveToHDF5Group(&face_group, intersect_lon, "INTERSECT_LON");
     delete intersect_lon;
 
@@ -1580,12 +2183,12 @@ void Grid::saveGrid2HDF5(void)
     delete node_area;
 
     h5DataArray<double> * node_lat = new h5DataArray<double>(NODE_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<NODE_NUM; i++) node_lat->data[i] = node_list[i]->sph_coords[1]*180.0/pi; // Convert to degrees
+    for (unsigned i=0; i<NODE_NUM; i++) node_lat->data[i] = node_list[i]->sph_coords[1]*180.0/_PI; // Convert to degrees
     saveToHDF5Group(&node_group, node_lat, "LAT");
     delete node_lat;
 
     h5DataArray<double> * node_lon = new h5DataArray<double>(NODE_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<NODE_NUM; i++) node_lon->data[i] = node_list[i]->sph_coords[2]*180.0/pi + 180.0;
+    for (unsigned i=0; i<NODE_NUM; i++) node_lon->data[i] = node_list[i]->sph_coords[2]*180.0/_PI + 180.0;
     saveToHDF5Group(&node_group, node_lon, "LON");
     delete node_lon;
     // -----------------------------------------------------------------------------------
@@ -1600,12 +2203,12 @@ void Grid::saveGrid2HDF5(void)
     delete vertex_ID;
 
     h5DataArray<double> * vertex_lat = new h5DataArray<double>(VERTEX_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<VERTEX_NUM; i++) vertex_lat->data[i] = vertex_list[i]->sph_coords[1]*180.0/pi; // Convert to degrees
+    for (unsigned i=0; i<VERTEX_NUM; i++) vertex_lat->data[i] = vertex_list[i]->sph_coords[1]*180.0/_PI; // Convert to degrees
     saveToHDF5Group(&vertex_group, vertex_lat, "LAT");
     delete vertex_lat;
 
     h5DataArray<double> * vertex_lon = new h5DataArray<double>(VERTEX_NUM, H5T_NATIVE_DOUBLE);
-    for (unsigned i=0; i<VERTEX_NUM; i++) vertex_lon->data[i] = vertex_list[i]->sph_coords[2]*180.0/pi + 180.0;
+    for (unsigned i=0; i<VERTEX_NUM; i++) vertex_lon->data[i] = vertex_list[i]->sph_coords[2]*180.0/_PI + 180.0;
     saveToHDF5Group(&vertex_group, vertex_lon, "LON");
     delete vertex_lon;
 
@@ -1832,5 +2435,7 @@ void Grid::saveGrid2HDF5(void)
 
     saveToHDF5Group(&vertex_group_f_f, vertex_f_dir, "DIR");
     delete vertex_f_dir;
+
+    std::cout<<"SAVED WHOLE GRID TO HDF5"<<std::endl;
     
-} 
+}

@@ -6,12 +6,43 @@
 #include <algorithm>
 #include <vector>
 
-// struct NodeStruct {
-//     Node * node;
-//     int ID;
+template <typename T>
+struct AngleSort{
 
-//     NodesSo
-// }
+    T * element;
+    double ang;
+    
+    // Constructor does nothing
+    AngleSort() {};
+
+    // Constructor calculates the angle for you, 
+    // relative to coordinates of sph_parent
+    AngleSort(T * s, double sph_parent[])
+    {
+        this->element = s;
+
+        double vec1[2] = {0., 1.};
+        double vec2[2];
+
+        double dot_prod;
+        double det;
+
+        sph2Map(sph_parent, element->sph_coords, vec2);
+
+        dot_prod = vec1[0]*vec2[0] + vec1[1]*vec2[1];
+
+        det = vec1[0]*vec2[1] - vec1[1]*vec2[0];
+
+        // this->ang = atan2(dot_prod, det)*180./_PI;
+
+        double angle = atan2(det, dot_prod)*180./_PI;
+        if (angle > 0.0+1e-8) angle -= 360.0;
+        this->ang = angle;
+
+    };
+
+    bool operator<( const AngleSort& rhs ) const { return ang < rhs.ang; }
+};
 
 Vertex::Vertex(int ID_num, double xyz[], Node * node1, Node * node2, Node * node3) : Element(xyz, ID_num)
 {
@@ -27,6 +58,23 @@ Vertex::Vertex(int ID_num, double xyz[], Node * node1, Node * node2, Node * node
 
   cart2sph(xyz_coords, sph_coords);
 
+
+  // Sort nodes in clockwise order! Important for calculating 
+  // Voronoi centres!
+  std::vector<AngleSort<Node>> ordered;
+    // std::cout<<this->ID<<std::endl;
+    for (unsigned i=0; i<this->node_list.size(); i++) {
+        Node * node = this->node_list[i];
+
+        // std::cout<<' '<<face_friend->ID;
+
+        ordered.push_back( AngleSort<Node>(node, this->sph_coords));
+    }
+
+    std::sort(ordered.begin(), ordered.end());
+
+    for (unsigned k=0; k<3; k++) node_list[k] = ordered[k].element; 
+
 };
 
 bool Vertex::sharedNode(Node * node1, Node * node2, Node * node3)
@@ -38,11 +86,20 @@ bool Vertex::sharedNode(Node * node1, Node * node2, Node * node3)
     new_node_list[2] = node3;
 
     // Sort the nodes into ascending order 
-    std::sort( new_node_list.begin(), 
-               new_node_list.end(), 
-               [ ]( const auto& lhs, const auto& rhs ){ return lhs->ID < rhs->ID;}
-             );
+    std::vector<AngleSort<Node>> ordered;
+    // std::cout<<this->ID<<std::endl;
+    for (unsigned i=0; i<new_node_list.size(); i++) {
+        Node * node = new_node_list[i];
 
+        // std::cout<<' '<<face_friend->ID;
+
+        ordered.push_back( AngleSort<Node>(node, this->sph_coords));
+    }
+
+    std::sort(ordered.begin(), ordered.end());
+
+    for (unsigned k=0; k<3; k++) new_node_list[k] = ordered[k].element; 
+    
     if (    (new_node_list[0] == node_list[0]) 
          && (new_node_list[1] == node_list[1])
          && (new_node_list[2] == node_list[2]) )
@@ -122,6 +179,15 @@ void Vertex::updateArea(void)
     // }
 }
 
+void Vertex::updateInterpolationWeights(void)
+{
+    
+    for (unsigned k=0; k<3; k++) {
+        interp_weights[k] = sphericalArea(this->sph_coords, node_list[(k+1)%3]->sph_coords, node_list[(k+2)%3]->sph_coords)/this->area;
+    }
+}
+
+
 void Vertex::updateSubAreas()
 {
     for (unsigned k=0; k<3; k++)
@@ -161,5 +227,11 @@ void Vertex::updateGhosts()
     }
 
 };
+
+void Vertex::updatePosition(bool sph)
+{
+    voronoiCenter(node_list[0]->xyz_coords, node_list[1]->xyz_coords, node_list[2]->xyz_coords, this->xyz_coords);
+    if (sph) cart2sph(this->xyz_coords, this->sph_coords);
+}
 
 

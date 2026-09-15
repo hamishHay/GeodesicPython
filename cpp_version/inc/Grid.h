@@ -7,6 +7,7 @@
 #include "Node.h"
 #include "Face.h"
 #include "Vertex.h"
+#include "Region.h"
 #include "H5Cpp.h"
 #include <vector>
 
@@ -48,11 +49,17 @@ public:
   std::vector<Node*> node_list;
   std::vector<Face*> face_list;
   std::vector<Vertex*> vertex_list;
+  std::vector<Region*> region_list;
+
 
   // Nodes, faces and vertices that lie in each region
   std::vector< std::vector< Node *> > region_node_list;
   std::vector< std::vector< Face *> > region_face_list;
   std::vector< std::vector< Vertex *> > region_vertex_list;
+
+  std::vector< std::vector< Node *> > region_all_node_list;
+  std::vector< std::vector< Face *> > region_all_face_list;
+  std::vector< std::vector< Vertex *> > region_all_vertex_list;
 
 
   // Nodes, faces and vertices that neighbour, but do not lie
@@ -60,6 +67,12 @@ public:
   std::vector< std::vector< Node *> > region_node_ghost_list;
   std::vector< std::vector< Face *> > region_face_ghost_list;
   std::vector< std::vector< Vertex *> > region_vertex_ghost_list;
+
+    // std::vector< unsigned > region_node_num;
+    // std::vector< unsigned > region_node_ghost_num;
+    // std::vector< unsigned > region_face_num;
+    // std::vector< unsigned > region__num;
+
 //   std::vector<std::vector< std::vector<int> > > regions
     // = std::vector< std::vector< std::vector< int > > > (5, std::vector<std::vector< int>> (4, std::vector<int> (3) ) );
 
@@ -69,6 +82,8 @@ public:
   void addNode(Node * n);
 
 //   void defineRegion(std::vector< std::vector<double> >);
+
+  void addRegion(Region * region);
 
   void allocateElementsToRegions(void);
 
@@ -99,6 +114,10 @@ public:
   void calculateProperties(void);
 
   void saveGrid2HDF5(void);
+  void saveWholeGrid2HDF5(void);
+
+  template<typename T>
+  void reduceBandwidth(std::vector<T *> &list);
 };
 
 #endif

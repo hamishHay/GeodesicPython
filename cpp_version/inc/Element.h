@@ -13,6 +13,11 @@ class Element
     int ID;                   // Global ID
     int RID = 0;              // Local ID
     int region = 0;           // Region that element resides in
+    bool added_to_region = 0;
+    bool reordered = 0;
+
+    // loacl ID that element holds in each region the domain
+    std::vector<int> region_ID; 
 
     // Constructor takes xyz coords, and usually an ID
     Element(int ID_num);
@@ -31,7 +36,7 @@ class Element
     // project current xyz coords onto sphere of radius r
     void project2Sphere(double r=1.0);
 
-    void updateXYZ(const double xyz[]);
+    void updateXYZ(const double xyz[], bool sph=true);
 
     void transformSph(const double rot);
 

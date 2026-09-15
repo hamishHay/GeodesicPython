@@ -33,9 +33,9 @@ struct AngleSort{
 
         det = vec1[0]*vec2[1] - vec1[1]*vec2[0];
 
-        // this->ang = atan2(dot_prod, det)*180./pi;
+        // this->ang = atan2(dot_prod, det)*180./_PI;
 
-        double angle = atan2(det, dot_prod)*180./pi;
+        double angle = atan2(det, dot_prod)*180./_PI;
         if (angle > 0.0+1e-8) angle -= 360.0;
         this->ang = angle;
 
@@ -67,7 +67,7 @@ void Face::updateCenterPos(void)
     
     double sph[3];
     sph[0] = this->sph_coords[0];
-    sph[1] = 0.5*pi - this->sph_coords[1];
+    sph[1] = this->sph_coords[1];
     sph[2] = this->sph_coords[2];
 
     
@@ -218,7 +218,7 @@ void Face::updateFaceFriends(void)
 
         det = vec1[0]*vec2[1] - vec1[1]*vec2[0];
 
-        double angle = atan2(det, dot_prod)*180./pi;
+        double angle = atan2(det, dot_prod)*180./_PI;
         if (angle < 0.0) angle += 360.0;
 
         ordered1[i].ang = angle;
@@ -255,7 +255,7 @@ void Face::updateFaceFriends(void)
 
         det = vec1[0]*vec2[1] - vec1[1]*vec2[0];
         
-        double angle = atan2(det, dot_prod)*180./pi;
+        double angle = atan2(det, dot_prod)*180./_PI;
         if (angle < 0.0) angle += 360.0;
 
         ordered2[i].ang = angle;
@@ -267,6 +267,152 @@ void Face::updateFaceFriends(void)
     for (unsigned i=0; i<this->friends_list2.size(); i++) this->friends_list2[i] = ordered2[i].element;
 
 };
+
+// This function relies on n1 being the upwind node
+// and n2 being the downwind node
+void Face::updateInterpolationWeights(void)
+{
+    // int ne, tev;
+    double ne, tev;
+    Face * face_e1, * face_e2;
+    Vertex * shared_v;
+
+    face_e1 = this;
+
+    weights1.clear();
+    weights2.clear();
+    // weights1 = std::vector<double>(friends_list1.size());
+    // weights2 = std::vector<double>(friends_list2.size());
+    
+
+    // list 1 for x=0, list 2 for x=1
+    Node * node;
+    for (unsigned x=0; x<2; x++) {
+        tev = 0;
+        if (x==0) node = n1;
+        else      node = n2;
+
+        if (x==0) face_e2 = friends_list1[0];
+        else      face_e2 = friends_list2[0];
+
+            // Find shared vertex with first face friend
+
+        // std::cout<<face_e1->v1-ID<<' '<<face_e1->v2-ID<<' '<<face_e2->v1-ID<<' '<<face_e1->v1-ID<<std::endl;
+        if (face_e1->v1 == face_e2->v1)         shared_v = face_e1->v1;
+        else if (face_e1->v1 == face_e2->v2)    shared_v = face_e1->v1;
+        else                                    shared_v = face_e1->v2;
+
+        // Find the tev indicator associated with the shared 
+        // vertex and the first friend
+        for (unsigned k=0; k<3; k++) {
+            if (shared_v->face_list[k] == face_e1) {
+                tev = (double)shared_v->face_dirs[k];
+                // std::cout<<this->ID<<' '<<shared_v->ID<<' '<<k<<' '<<tev<<std::endl;
+                break;
+            }
+        }
+
+        
+
+        unsigned fnum;
+        if (x==0) fnum = friends_list1.size();
+        else      fnum = friends_list2.size();
+        for (unsigned i=0; i<fnum; i++) {
+            ne = 0.0;
+            // Calculate wee'
+            double wee = 0.0;
+            if (x==0) face_e2 = friends_list1[i];
+            else      face_e2 = friends_list2[i];
+
+            // Find direction of the first face in the sum, e'
+            if (face_e2->n1 == node) ne = 1;     // face points outwards
+            else ne = -1;                            // face point inwards
+
+            for (unsigned j=0; j<node->face_list.size(); j++) {
+                if (node->face_list[j] == face_e2) {
+                    // std::cout<<ne<<' '<<node->face_dirs[j]<<std::endl;
+                    ne = (double)node->face_dirs[j];
+                }
+            }
+
+            for (int j=(int)i; j>=0; j--) {
+                Face * face1, *face2;
+                if (x==0) face2 = friends_list1[j];
+                else      face2 = friends_list2[j];
+
+                if (j==0) {
+                    face1 = this;
+                }
+                else {
+                    if (x==0) face1 = friends_list1[j-1];
+                    else      face1 = friends_list2[j-1];
+                }
+                
+                if (face1->v1 == face2->v1)         shared_v = face1->v1;
+                else if (face1->v1 == face2->v2)    shared_v = face1->v1;
+                else                                shared_v = face1->v2;
+
+                for (unsigned k=0; k<3; k++){
+                    if (shared_v->node_list[k] == node) {
+
+                        wee += shared_v->subareas[k];
+                        // std::cout<<"    "<<j<<' '<<wee/n1->area - 0.5<<' '<<shared_v->subareas[k]<<std::endl;
+                        break; 
+                    }
+                }
+
+                // std::cout<<shared_v->ID<<std::endl;
+                
+            }
+
+            
+
+            // std::cout<<i<<' '<<x<<' '<<n1->ID<<' '<<n2->ID<<' '<<tev*ne*wee/n1->area-0.5<<' '<<tev<<' '<<ne<<std::endl;
+
+            double weight = 0.0;
+            double cv_area = 0.0;
+            double tick = -tev*ne;
+            if (x==0) cv_area = 1.0/n1->area;
+            else cv_area = 1.0/n2->area;
+            
+            // std::cout<<tev<<'*'<<ne<<'*'<<wee<<'*'<<cv_area<<" - 0.5    "<<weight<<std::endl;
+
+            weight = -tev*ne*(wee*cv_area - 0.5);// - 0.5;
+            // weight = weight - 0.5;
+            // std::cout<<-tev<<'*'<<ne<<'*'<<wee<<'*'<<cv_area<<" - 0.5    "<<weight<<std::endl;
+
+            // std::cout<<this->ID<<' '<<i<<' '<<face_e2->ID<<' '<<weight<<std::endl;
+
+            
+
+
+            
+            // weight *= -tev * ne;
+            // weight -= 0.5;
+            // wee = -tev * ne * wee/n1->area;
+            // std::cout<<i<<' '<<weight;
+            if (x==0) weights1.push_back( weight );
+            else      weights2.push_back( weight );
+
+            // if (x==0) {
+            //     std::cout<<' '<<i<<' '<<weights1[i];
+            // }
+            // else std::cout<<' '<<i<<' '<<weights2[i];
+
+            
+        
+
+        }
+        // std::cout<<std::endl<<std::endl;
+        
+
+    }
+
+    
+
+
+    
+}
 
 void Face::updateIntersectPos(void)
 {

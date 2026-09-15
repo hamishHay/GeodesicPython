@@ -9,13 +9,13 @@ COBJ = $(CSRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 EXE = GridGenerator
 
 
-CFLAGS = -c -g -O3 -Wall -std=c++17 -I$(INC_DIR) -I/usr/local/include/hdf5/ -I/usr/include/hdf5/serial  
+CFLAGS = -Ofast -funroll-loops -fopenmp -c -g -Wall -std=c++17 -I$(INC_DIR) -I/home/hamish/local/include -I/usr/local/ -I/usr/local/include/hdf5/ -I/usr/include/hdf5/serial  
 
 
 all: $(EXE)
 
 $(EXE): $(COBJ)
-	$(CC) $^ -o $@  -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -lhdf5 -lhdf5_cpp -g
+	$(CC) $^ -o $@  -L/usr/lib/x86_64-linux-gnu/hdf5/serial/ -L/home/hamish/local/lib  -lmetis -fopenmp -lhdf5 -lhdf5_cpp -g
 
 # $(EXE): $(FOBJ) $(COBJ)
 # $(CC) $(FLINK) $^ -o $@  $(FLINK) $(CLINK) 

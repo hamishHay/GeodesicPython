@@ -24,6 +24,7 @@ class Vertex : public Element
 
     std::vector<Face *> face_ghost_list;
     std::vector<Node *> node_ghost_list;
+    std::vector<double> interp_weights = std::vector<double> (3);
 
     int friend_num;           // number of surrounding friends
     double area;
@@ -42,6 +43,8 @@ class Vertex : public Element
     void updateArea();
     void updateSubAreas();
     void updateGhosts();
+    void updateInterpolationWeights();
+    void updatePosition(bool sph=true);
 };
 
 #endif

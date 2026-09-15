@@ -99,8 +99,8 @@ void Element::project2Sphere(double r)
 void Element::printCoords()
 {
     std::cout<<"Coordinates of node "<<this->ID<<": \n";
-    std::cout<<" lat: "<<this->sph_coords[1]*180./pi<<", ";
-    std::cout<<" lon: "<<this->sph_coords[2]*180./pi<<std::endl;
+    std::cout<<" lat: "<<this->sph_coords[1]*180./_PI<<", ";
+    std::cout<<" lon: "<<this->sph_coords[2]*180./_PI<<std::endl;
 }
 
 void Element::getMapCoords(const Element &center_node, double xy[])
@@ -119,13 +119,13 @@ void Element::getMapCoords(const Element &center_node, double xy[])
   xy[1] = m * (sin(lat2)*cos(lat1) - cos(lat2)*sin(lat1)*cos(lon2-lon1));
 }
 
-void Element::updateXYZ(const double xyz[])
+void Element::updateXYZ(const double xyz[], bool sph)
 {
     this->xyz_coords[0] = xyz[0];
     this->xyz_coords[1] = xyz[1];
     this->xyz_coords[2] = xyz[2];
 
-    cart2sph(xyz_coords, sph_coords);
+    if (sph) cart2sph(xyz_coords, sph_coords);
 }
 
 Element * Element::operator+(const Element &other_element)
@@ -189,7 +189,7 @@ Element & Element::operator=(const Element &other_element)
 
   // Maybe we shouldn't do this here?
   cart2sph(xyz_coords, sph_coords);
-  // sph_coords[1] = pi*0.5 - sph_coords[1];
+  // sph_coords[1] = _PI*0.5 - sph_coords[1];
 
   return *this;
 }

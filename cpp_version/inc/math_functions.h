@@ -1,6 +1,7 @@
 #include <math.h>
 #include <iostream>
-# define pi 3.141592653589793238462643383279502884L
+# define _PI 3.141592653589793238462643383279502884L
+#include <Eigen/Dense>
 
 #ifndef MATH_FUNCTIONS_H_INCDLUDED
 #define MATH_FUNCTIONS_H_INCDLUDED
@@ -33,7 +34,7 @@ void inline cart2sph(double xyz[], double sph_coords[])
   z = xyz[2];
 
   r = sqrt(x*x + y*y + z*z);
-  theta = pi*0.5 - acos(z/r); // Converts to latitude
+  theta = _PI*0.5 - acos(z/r); // Converts to latitude
   phi = atan2(y,x);
 
 
@@ -41,13 +42,13 @@ void inline cart2sph(double xyz[], double sph_coords[])
   sph_coords[1] = theta;
   sph_coords[2] = phi;
 
-  if ((phi)*180./pi > 359.9) sph_coords[2] = 0.0;
+//   if ((phi)*180./_PI > 359.9) sph_coords[2] = 0.0;
 };
 
 void inline sph2cart(double sph_coords[], double xyz[], bool rad);
 void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)
 {
-  double r, theta, phi;
+  double r, theta, phi, costheta;
 
   r = sph_coords[0];
   theta = sph_coords[1];
@@ -56,18 +57,19 @@ void inline sph2cart(double sph_coords[], double xyz[], bool rad=true)
 
   if (!rad)
   {
-    theta *= pi/180.;
-    phi *= pi/180.;
+    theta *= _PI/180.;
+    phi *= _PI/180.;
   }
 
+  costheta = cos(theta);
   // if (fabs(r) < 1e-8)     r = 0.0;
   // if (fabs(theta) < 1e-8) theta = 0.0;
   // if (fabs(phi) < 1e-8)   phi = 0.0;
 
   // expects colatitude!
-  xyz[0] = r*sin(theta)*cos(phi);
-  xyz[1] = r*sin(theta)*sin(phi);
-  xyz[2] = r*cos(theta);
+  xyz[0] = r*costheta*cos(phi);
+  xyz[1] = r*costheta*sin(phi);
+  xyz[2] = r*sin(theta);
 
   // std::cout<<xyz[0]<<'\t'<<xyz[1]<<'\t'<<xyz[2]<<std::endl;
 
@@ -97,7 +99,10 @@ double inline sphericalLength(double sph_c1[], double sph_c2[])
 double inline sphericalArea(double sph_c1[], double sph_c2[], double sph_c3[]);
 double inline sphericalArea(double sph_c1[], double sph_c2[], double sph_c3[])
 {
+    
     double a, b, c;
+    // double cosa, cosc, cosb;
+    // double sina, sina, sinb;
     double A, B, C, E;
 
     a = fabs(sphericalLength(sph_c1, sph_c2));
@@ -114,10 +119,12 @@ double inline sphericalArea(double sph_c1[], double sph_c2[], double sph_c3[])
     // B = fabs( asin(sin(A)*sin(b)/sin(a)));
     // C = fabs( asin(sin(A)*sin(c)/sin(a)));
 
-    E = (A + B + C) - pi;
+    E = (A + B + C) - _PI;
 
     return fabs(E);
 };
+
+
 
 void inline crossProduct(double v1[], double v2[], double v1xv2[]);
 void inline crossProduct(double v1[], double v2[], double v1xv2[])
@@ -126,6 +133,8 @@ void inline crossProduct(double v1[], double v2[], double v1xv2[])
     v1xv2[1] = -(v1[0]*v2[2] - v2[0]*v1[2]);
     v1xv2[2] = v1[0]*v2[1] - v2[0]*v1[1];
 };
+
+
 
 void inline voronoiCenter(double v1[], double v2[], double v3[], double vc[]);
 void inline voronoiCenter(double v1[], double v2[], double v3[], double vc[])
@@ -142,10 +151,10 @@ void inline voronoiCenter(double v1[], double v2[], double v3[], double vc[])
 
     double mag = 0.0;
 
-    for (int k=0; k<3; k++) mag += pow(vcross[k], 2.0);
-    mag = sqrt(mag);
+    for (int k=0; k<3; k++) mag += vcross[k]*vcross[k];
+    mag = 1.0/sqrt(mag);
 
-    for (int k=0; k<3; k++) vc[k] = -vcross[k]/mag;
+    for (int k=0; k<3; k++) vc[k] = vcross[k]*mag;
 
 };
 
@@ -159,38 +168,36 @@ double inline dotProduct(double v1[], double v2[])
     return v1Dotv2;
 };
 
-bool inline isInsideSphericalTriangle(double v1[], double v2[], double v3[], double v[]);
-bool inline isInsideSphericalTriangle(double v1[], double v2[], double v3[], double v[])
+double inline sphericalArea2(double a[], double b[], double c[]);
+double inline sphericalArea2(double a[], double b[], double c[])
 {
-    double n1[3], n2[3], n3[3];
-    // double s1[3], s2[3], s3[3];
-    // int k;
+    
+    double cross[3];
+    crossProduct(b, c, cross);
 
-    crossProduct(v1, v2, n1);
-    crossProduct(v2, v3, n2);
-    crossProduct(v3, v1, n3);
+    double tanE2 = fabs(dotProduct(a, cross)) / (1.0 + dotProduct(a,b) + dotProduct(b,c) + dotProduct(a,c));
 
-    // for (k=0; k<3; k++)
-    // {
-    //     s1[k] = v[k] - v1[k];
-    //     s2[k] = v[k] - v2[k];
-    //     s3[k] = v[k] - v3[k];
-    // }
+    return 2.0 * atan(tanE2);
+};
 
-    // if (v[2] < 0)
-    // {
-    //     for (k=0; k<3; k++)
-    //     {
-    //         n1[k] = -n1[k];
-    //         n2[k] = -n2[k];
-    //         n3[k] = -n3[k];
-    //     }
-    // }
+bool inline isInsideSphericalTriangle(double p1[], double p2[], double p3[], double pt[]);
+bool inline isInsideSphericalTriangle(double p1[], double p2[], double p3[], double pt[])
+{
+      Eigen::Matrix3d A;
+      Eigen::Vector3d v;
+      Eigen::Vector3d s;
 
-    // std::cout<<dotProduct(v, n1)<<'\t'<<dotProduct(v, n2)<<'\t'<<dotProduct(v, n3)<<std::endl;
-    if (dotProduct(v, n1) < 1e-8 && dotProduct(v, n2) < 1e-8 && dotProduct(v, n3) < 1e-8) return true;
-    // if (dotProduct(s1, n1) > -1e-8 && dotProduct(v, n2) > -1e-8 && dotProduct(v, n3) > -1e-8) return true;
-    else return false;
+      A << p1[0], p2[0], p3[0], p1[1], p2[1], p3[1], p1[2], p2[2], p3[2];
+
+      v << pt[0], pt[1], pt[2];
+
+      s = A.fullPivHouseholderQr().solve(v);
+
+    double tol = -1e-16;
+    if ((s[0] >= tol) && (s[1] >= tol) && (s[2] >= tol)) 
+        return true;
+    return false;
+
 };
 
 bool inline isOnEdge(double v1[], double v2[], double v[]);
@@ -201,6 +208,18 @@ bool inline isOnEdge(double v1[], double v2[], double v[])
     crossProduct(v1, v2, n1);
 
     if (fabs(dotProduct(v, n1)) < 1e-8) return true;
+    // if (dotProduct(s1, n1) > -1e-8 && dotProduct(v, n2) > -1e-8 && dotProduct(v, n3) > -1e-8) return true;
+    else return false;
+};
+
+bool inline intersects(double v1[], double v2[], double v3[], double v4[]);
+bool inline intersects(double v1[], double v2[], double v3[], double v4[])
+{
+    double n1[3];
+
+    crossProduct(v1, v2, n1);
+
+    if (fabs(dotProduct(v1, n1)) < 1e-8) return true;
     // if (dotProduct(s1, n1) > -1e-8 && dotProduct(v, n2) > -1e-8 && dotProduct(v, n3) > -1e-8) return true;
     else return false;
 };
@@ -259,15 +278,15 @@ inline void normalVectorBetweenXYZ(double sph1[], double sph2[], double nxyz[])
     double sph1_temp[3], sph2_temp[3];
 
     // Convert to colat because why
-    // sph1[1] = pi*0.5 - sph1[1];
-    // sph2[1] = pi*0.5 - sph2[1];
+    // sph1[1] = _PI*0.5 - sph1[1];
+    // sph2[1] = _PI*0.5 - sph2[1];
 
     sph1_temp[0] = sph1[0];
-    sph1_temp[1] = 0.5*pi - sph1[1];
+    sph1_temp[1] = sph1[1];
     sph1_temp[2] = sph1[2];
 
     sph2_temp[0] = sph2[0];
-    sph2_temp[1] = 0.5*pi - sph2[1];
+    sph2_temp[1] = sph2[1];
     sph2_temp[2] = sph2[2];
 
     // Get cartesian coords of each spherical coordiate
@@ -284,40 +303,6 @@ inline void normalVectorBetweenXYZ(double sph1[], double sph2[], double nxyz[])
     nxyz[0] /= mag;
     nxyz[1] /= mag;
     nxyz[2] /= mag;
-
-    // Convert back, just in case
-    // sph1[1] = pi*0.5 - sph1[1];
-    // sph2[1] = pi*0.5 - sph2[1];
-
-    // midpointBetweenSph(sph1, sph2, sph_mid);
-
-    // double lat = sph_mid[0];
-    // double lon = sph_mid[1];
-
-    // double cxyz[3];
-
-    // // Get cartesian coords of face midpoint
-    // sph2cart(cxyz[0], cxyz[1], cxyz[2], 1.0, sph_mid[0], sph_mid[1]);
-
-    // double lonx, lony, lonz;
-    // double latx, laty, latz;
-    // double zfact = 1.0/sqrt(1 - pow(cxyz[2], 2.0));
-
-    // // longitude unit vector, in cartesian components
-    // lonx = zfact * -cxyz[1];
-    // lony = zfact * cxyz[0];
-    // lonz = 0.0;
-    
-    // // latitude unit vector, in cartesian components
-    // latx = zfact * -cxyz[2]*cxyz[0];
-    // laty = zfact * -cxyz[2]*cxyz[1];
-    // latz = zfact * (1-cxyz[2]*cxyz[2]);
-
-    // double nlon, nlat;
-
-    // // lat and lon unit vectors 
-    // nlon = n[0]*lonx + n[1]*lony + n[2]*lonz;
-    // nlat = n[0]*latx + n[1]*laty + n[2]*latz;
 };
 
 inline void cart2sphNormalVector(double &, double &, double &);
@@ -403,9 +388,9 @@ inline void intersectPointSph(double sph1[], double sph2[], double sph3[], doubl
 
     sph_int[0] = 1.0; 
     sph_int[1] = asin(mp[2]/1.0);
-    sph_int[2] = atan2(mp[1], mp[0]);// + pi;
+    sph_int[2] = atan2(mp[1], mp[0]);// + _PI;
 
-    // if (sph_int[1] < 0.0) sph_int[1] += 2*pi;
+    // if (sph_int[1] < 0.0) sph_int[1] += 2*_PI;
 }
 
 
