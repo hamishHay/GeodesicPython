@@ -169,41 +169,41 @@ int main(int argc, char* argv[])
     pos1[1] = 0.0; pos1[2] = 0.0;
     pos2[1] = 0.0; pos2[2] = _PI*0.5;
     pos3[1] = 0.5*_PI; pos3[2] = 0.0; 
-    region0->addTriangle(pos1, pos2, pos3);
+    region1->addTriangle(pos1, pos2, pos3);
 
     pos1[1] = 0.0; pos1[2] = _PI*0.5;
     pos2[1] = 0.0; pos2[2] = _PI;
     pos3[1] = 0.5*_PI; pos3[2] = 0.0; 
-    region0->addTriangle(pos1, pos2, pos3);
+    region1->addTriangle(pos1, pos2, pos3);
 
     Region * region2 = new Region(2);
 
     pos1[1] = 0.0; pos1[2] = -_PI;
     pos2[1] = 0.0; pos2[2] = -_PI*0.5;
     pos3[1] = -0.5*_PI; pos3[2] = 0.0; 
-    region0->addTriangle(pos1, pos2, pos3);
+    region2->addTriangle(pos1, pos2, pos3);
 
     pos1[1] = 0.0; pos1[2] = -_PI*0.5;
     pos2[1] = 0.0; pos2[2] = 0.0;
     pos3[1] = -0.5*_PI; pos3[2] = 0.0; 
-    region0->addTriangle(pos1, pos2, pos3);
+    region2->addTriangle(pos1, pos2, pos3);
 
     Region * region3 = new Region(3);
 
     pos1[1] = 0.0; pos1[2] = 0.0;
     pos2[1] = 0.0; pos2[2] = _PI*0.5;
     pos3[1] = -0.5*_PI; pos3[2] = 0.0; 
-    region0->addTriangle(pos1, pos2, pos3);
+    region3->addTriangle(pos1, pos2, pos3);
 
     pos1[1] = 0.0; pos1[2] = _PI*0.5;
     pos2[1] = 0.0; pos2[2] = _PI;
     pos3[1] = -0.5*_PI; pos3[2] = 0.0; 
-    region0->addTriangle(pos1, pos2, pos3);
+    region3->addTriangle(pos1, pos2, pos3);
 
     grid.addRegion(region0);
-    // grid.addRegion(region1);
-    // grid.addRegion(region2);
-    // grid.addRegion(region3);
+    grid.addRegion(region1);
+    grid.addRegion(region2);
+    grid.addRegion(region3);
 
 
   grid.findFriends();
@@ -233,57 +233,11 @@ int main(int argc, char* argv[])
   
   grid.createFaces();
 
-// //   for (int i=0; i<grid.node_list.size(); i++)
-// //   {
-// //     Node * node = grid.node_list[i];
-// //     std::cout<<i<<std::endl;
-// //     for (int j=0; j<node->face_list.size(); j++)
-// //     {
-// //         std::cout<<' '<<node->face_list[j]->length;
-// //     }
-// //     std::cout<<std::endl;  
-// //   }
-
-
-
   grid.calculateProperties();
 
   grid.allocateElementsToRegions();
 
   grid.saveWholeGrid2HDF5();
-
-
-
-//   for (int i=0; i<grid.node_list.size(); i++)
-//   {
-//     Node * node = grid.node_list[i];
-//     std::cout<<i<<' '<<node->area<<std::endl;
-//     // for (int j=0; j<node->friends_list.size(); j++)
-//     // {
-//     //     std::cout<<' '<<node->friends_list[j]->ID<<' '<<node->node_dists[j]<<std::endl;;
-//     // }
-//     // std::cout<<std::endl;  
-//   }
-
-    // for (int i=0; i<grid.node_list.size(); i++)
-    // {
-    //     Node * node = grid.node_list[i];
-    //     std::cout<<i<<std::endl;
-    //     for (int j=0; j<node->face_list.size(); j++)
-    //     {
-    //         std::cout<<' '<<node->face_list[j]->ID<<' '<<node->face_list[j]->sph_normal[0]<<' '<<node->face_list[j]->sph_normal[1]<<' '<<node->face_dirs[j]<<std::endl;;
-    //     }
-    //     std::cout<<std::endl;  
-    // }
-
-    // for (int i=0; i<grid.face_list.size(); i++)
-    // {
-    //     Face * face = grid.face_list[i];
-    //     std::cout<<face->ID<<' '<<face->sph_normal[0]<<' '<<face->sph_normal[1]<<std::endl;
-    // }
-
-
-//   std::cout<<std::endl<<"Grid generated. Total node #: "<<grid.node_list.size()<<std::endl;
 
   grid.saveGrid2File();
   grid.saveGrid2HDF5();
