@@ -651,13 +651,15 @@ void Grid::refineBoundary(void)
 
 void Grid::shiftNodes(void)
 {
+
+    
     double mag_r;
     Node * node1;
     double sph1[3], sph2[3], sph3[3];
     double xy1[3], xy2[3], xy3[3];
     double xy_new_center[3];
-    double xy_new_center2[node_list.size()][3];
-    double areas[6];
+    std::vector<std::array<double, 3>> xy_new_center2(node_list.size());
+    double areas[6];    
     std::vector<std::vector<double>> shifted_xyz(node_list.size(), std::vector<double> (3));
     double residual = 1.0;
     double r = 0.0;
@@ -676,6 +678,7 @@ void Grid::shiftNodes(void)
         iter = 0;
     // findCentroids();
 
+    
     for (unsigned i=0; i<node_list.size(); i++)
     {
         xy_new_center2[i][0] = node_list[i]->xyz_coords[0];
@@ -1665,7 +1668,7 @@ void Grid::saveGrid2HDF5(void)
 
         // std::cout<<H5::PredType::NATIVE_UINT<<std::endl;
         h5DataArray<unsigned> * face_ID = new h5DataArray<unsigned>(FACE_NUM, H5T_NATIVE_UINT);
-        for (unsigned i=0; i<FACE_NUM; i++) face_ID->data[i] = i;//r_face_list[i]->RID;
+        for (unsigned i=0; i<FACE_NUM; i++) face_ID->data[i] = face_list[i]->ID;//i;//r_face_list[i]->RID;
         saveToHDF5Group(&face_group, face_ID, "ID");
         delete face_ID;
 
@@ -1745,7 +1748,7 @@ void Grid::saveGrid2HDF5(void)
 
 
         h5DataArray<unsigned> * node_ID = new h5DataArray<unsigned>(NODE_NUM, H5T_NATIVE_UINT);
-        for (unsigned i=0; i<NODE_NUM; i++) node_ID->data[i] = i;//r_node_list[i]->RID;
+        for (unsigned i=0; i<NODE_NUM; i++) node_ID->data[i] = node_list[i]->ID; //i;//r_node_list[i]->RID;
         saveToHDF5Group(&node_group, node_ID, "ID");
         delete node_ID;
 
@@ -1796,7 +1799,7 @@ void Grid::saveGrid2HDF5(void)
 
 
         h5DataArray<unsigned> * vertex_ID = new h5DataArray<unsigned>(VERTEX_NUM, H5T_NATIVE_UINT);
-        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_ID->data[i] = i;//r_vertex_list[i]->RID;
+        for (unsigned i=0; i<VERTEX_NUM; i++) vertex_ID->data[i] = vertex_list[i]->ID;//i;//r_vertex_list[i]->RID;
         saveToHDF5Group(&vertex_group, vertex_ID, "ID");
         delete vertex_ID;
 
