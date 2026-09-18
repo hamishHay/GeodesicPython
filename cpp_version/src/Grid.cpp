@@ -653,16 +653,19 @@ void Grid::shiftNodes(void)
 {
 
     
-    double mag_r;
-    Node * node1;
+    // double mag_r;
+    // Node * node1;
     double sph1[3], sph2[3], sph3[3];
-    double xy1[3], xy2[3], xy3[3];
-    double xy_new_center[3];
-    std::vector<std::array<double, 3>> xy_new_center2(node_list.size());
+    // double xy1[3], xy2[3], xy3[3];
+    // double xy_new_center[3];
+    int node_num = node_list.size();
+    // std::vector<std::array<double, 3>> xy_new_center2(node_list.size());
+    std::vector<std::array<double, 3>> old_xyz(node_list.size());
+    std::vector<std::array<double, 3>> new_xyz(node_list.size());
     double areas[6];    
     std::vector<std::vector<double>> shifted_xyz(node_list.size(), std::vector<double> (3));
     double residual = 1.0;
-    double r = 0.0;
+    // double r = 0.0;
     int iter;
 
     // while loop --> until converged
@@ -681,78 +684,96 @@ void Grid::shiftNodes(void)
     
     for (unsigned i=0; i<node_list.size(); i++)
     {
-        xy_new_center2[i][0] = node_list[i]->xyz_coords[0];
-        xy_new_center2[i][1] = node_list[i]->xyz_coords[1];
-        xy_new_center2[i][2] = node_list[i]->xyz_coords[2];
+        // xy_new_center2[i][0] = node_list[i]->xyz_coords[0];
+        // xy_new_center2[i][1] = node_list[i]->xyz_coords[1];
+        // xy_new_center2[i][2] = node_list[i]->xyz_coords[2];
+
+        old_xyz[i][0] = node_list[i]->xyz_coords[0];
+        old_xyz[i][1] = node_list[i]->xyz_coords[1];
+        old_xyz[i][2] = node_list[i]->xyz_coords[2];
+
+        new_xyz[i][0] = old_xyz[i][0];
+        new_xyz[i][1] = old_xyz[i][1];
+        new_xyz[i][2] = old_xyz[i][2];
     }
 
     while (residual > 1e-12)// && residual > e_converge)//(residual > e_converge)
     {
         // residual_old = residual;
         residual = 0.0;
-        // #pragma omp parallel for reduction(+:residual)
-        for (unsigned i=0; i<node_list.size(); i++)
+
+        #pragma omp parallel for reduction(+:residual)
+        for (unsigned i=0; i<static_cast<int>(node_num); ++i)
         {
-            node1 = this->node_list[i];
-            // if (node1->boundary == 0)
-            // {
-               
-                for (unsigned k=0; k<3; k++) {
-                    // sph1[k] = node1->sph_coords[k];    //latitude
-                    xy1[k] = node1->xyz_coords[k];
-                    // xy1[k] = xy_new_center2[i][k];
-                }
+            Node * node1 = this->node_list[i];
+            double xy1[3];
+            double xy_new_center[3] = {0.0, 0.0, 0.0};
 
-                xy_new_center[0] = 0.0;
-                xy_new_center[1] = 0.0;
-                xy_new_center[2] = 0.0;
 
-                for (unsigned j=0; j<node1->vertex_list.size(); j++)
+            for (unsigned k=0; k<3; k++) {
+                // sph1[k] = node1->sph_coords[k];    //latitude
+                // xy1[k] = node1->xyz_coords[k];
+                xy1[k] = old_xyz[i][k];
+                // xy1[k] = xy_new_center2[i][k];
+            }
+
+            unsigned v_num = node1->vertex_list.size();
+            for (unsigned j=0; j<v_num; ++j)
+            {
+                double xy2[3], xy3[3];
+                for (unsigned k=0; k<3; k++)
                 {
-                    for (unsigned k=0; k<3; k++)
-                    {
-                        xy2[k] = node1->vertex_list[j]->xyz_coords[k];
-                        xy3[k] = node1->vertex_list[(j+1)%node1->vertex_list.size()]->xyz_coords[k];
-                    } 
+                    xy2[k] = node1->vertex_list[j]->xyz_coords[k];
+                    xy3[k] = node1->vertex_list[(j+1)%v_num]->xyz_coords[k];
+                } 
 
-                    areas[j] = sphericalArea2(xy1, xy2, xy3); 
+                double area = sphericalArea2(xy1, xy2, xy3); 
 
-                    for (unsigned k=0; k<3; k++)
-                        xy_new_center[k] += areas[j]*(xy1[k] + xy2[k] + xy3[k]);
-                }
+                for (unsigned k=0; k<3; k++)
+                    xy_new_center[k] += area*(xy1[k] + xy2[k] + xy3[k]);
+            }
 
-                mag_r = 0.0;
-                for (unsigned k=0; k<3; k++) mag_r += xy_new_center[k]*xy_new_center[k];
-                mag_r = 1.0/sqrt(mag_r);
+            double mag_r = 0.0;
+            for (unsigned k=0; k<3; k++) mag_r += xy_new_center[k]*xy_new_center[k];
+            mag_r = 1.0/sqrt(mag_r);
 
-                r = 0.0;
-                for (unsigned k=0; k<3; k++) {
-                    xy_new_center[k] *= mag_r;
+            double r = 0.0;
+            for (unsigned k=0; k<3; k++) {
+                xy_new_center[k] *= mag_r;
 
-                    r += (xy_new_center[k] - xy1[k])*(xy_new_center[k] - xy1[k]);
-                }
+                r += (xy_new_center[k] - xy1[k])*(xy_new_center[k] - xy1[k]);
+            }
 
-                residual += r;//*r;
-        
-                node1->updateXYZ(xy_new_center, false);
+            residual += r;//*r;
+    
+            // node1->updateXYZ(xy_new_center, false);
 
-                xy_new_center2[i][0] = xy_new_center[0];
-                xy_new_center2[i][1] = xy_new_center[1];
-                xy_new_center2[i][2] = xy_new_center[2];
+            new_xyz[i][0] = xy_new_center[0];
+            new_xyz[i][1] = xy_new_center[1];
+            new_xyz[i][2] = xy_new_center[2];
             // }
         }
 
+        #pragma omp parallel for reduction(+:residual)
+        for (unsigned i = 0; i < node_num; ++i)
+        {
+            node_list[i]->updateXYZ(new_xyz[i].data(), false);
+
+            old_xyz[i] = new_xyz[i];
+        }
+
+        #pragma omp parallel for reduction(+:residual)
         for (unsigned i=0; i<vertex_list.size(); i++) {
            vertex_list[i]->updatePosition(false);
-
         }
         
         std::cout<<'\r'<<iter<<'\t'<<residual<<"   ";
+        // std::cout<<iter<<'\t'<<residual<<"   "<<std::endl;
 
         iter += 1;
 
-
     }
+    
 
     for (unsigned i=0; i<vertex_list.size(); i++) {
         vertex_list[i]->updatePosition();
@@ -761,6 +782,8 @@ void Grid::shiftNodes(void)
         // node_list[i]->updateXYZ(&xy_new_center2[i][0]);
         node_list[i]->updateXYZ(node_list[i]->xyz_coords);
     }
+
+
 
 };
 
