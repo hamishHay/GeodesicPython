@@ -3,7 +3,7 @@
 #include "Node.h"
 #include "Grid.h"
 #include "math_functions.h"
-#include "metis.h"
+//#include "metis.h"
 #include <math.h>
 #include <iostream>
 #include <stdio.h>
